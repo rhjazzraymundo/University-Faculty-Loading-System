@@ -1,0 +1,28 @@
+# Compiled output
+bin/
+build/
+target/
+dist/
+out/
+*.class
+
+# Jar files (but keep the Derby libraries in /lib)
+*.jar
+!lib/*.jar
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+nbproject/private/
+
+# Derby local database and log (each teammate generates their own)
+derby.log
+FacultyLoadingDB/
+
+# OS files
+.DS_Store
+Thumbs.db
