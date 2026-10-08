@@ -144,6 +144,9 @@ public class DashboardFrame extends JFrame {
 
         JButton btnRooms =
                 new JButton("Rooms");
+        
+        JButton btnSchedule = 
+                new JButton("Schedules");
 
         JButton btnLogout =
                 new JButton("Logout");
@@ -152,6 +155,7 @@ public class DashboardFrame extends JFrame {
         menu.add(btnSubjects);
         menu.add(btnDepartments);
         menu.add(btnRooms);
+        menu.add(btnSchedule);
         menu.add(btnLogout);
 
         root.add(menu,
@@ -168,7 +172,10 @@ public class DashboardFrame extends JFrame {
          SubjectFrame subjectFrame = new SubjectFrame();
              subjectFrame.setVisible(true);
         });
-
+       btnSchedule.addActionListener(e -> {
+         ScheduleFrame scheduleFrame = new ScheduleFrame();
+             scheduleFrame.setVisible(true);
+});
         btnDepartments.addActionListener(e ->
                 JOptionPane.showMessageDialog(
                         this,
