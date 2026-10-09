@@ -3,8 +3,11 @@ package ui;
 import dao.ScheduleDAO;
 import database.DatabaseConnection;
 import model.Schedule;
+import util.ConflictChecker;
 
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.sql.*;
@@ -22,938 +25,462 @@ public class ScheduleFrame extends JFrame {
     private JComboBox<String> cmbStartTime;
     private JComboBox<String> cmbEndTime;
 
+    private JLabel lblFacultyLoad;
     private JTextField txtSearch;
 
     private JTable table;
     private DefaultTableModel tableModel;
 
     private ScheduleDAO scheduleDAO;
-
     private int selectedScheduleId = -1;
 
-    // Store database IDs separately
     private List<Integer> subjectIds = new ArrayList<>();
     private List<Integer> facultyIds = new ArrayList<>();
     private List<Integer> roomIds = new ArrayList<>();
 
     public ScheduleFrame() {
-
         scheduleDAO = new ScheduleDAO();
 
-        setTitle("Schedule Management");
-        setSize(1100, 700);
+        setTitle("Faculty Loading & Schedule Management");
+        setSize(1150, 720);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
-        initializeUI();
+        buildUI();
         loadSubjects();
         loadFaculty();
         loadRooms();
         loadSchedules();
+        updateFacultyLoadDisplay();
     }
 
-    private void initializeUI() {
+    private void buildUI() {
+        JPanel root = new JPanel(new BorderLayout(0, 10));
+        root.setBackground(new Color(241, 245, 249));
 
-        JPanel mainPanel = new JPanel(new BorderLayout(15, 15));
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        // HEADER
+        JPanel header = new JPanel(new BorderLayout());
+        header.setBackground(new Color(30, 41, 59));
+        header.setBorder(new EmptyBorder(14, 20, 14, 20));
 
-        JLabel titleLabel = new JLabel("SCHEDULE MANAGEMENT");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 22));
+        JLabel title = new JLabel("FACULTY LOADING & SCHEDULE MANAGEMENT");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        title.setForeground(Color.WHITE);
 
-        mainPanel.add(titleLabel, BorderLayout.NORTH);
+        JLabel sub = new JLabel("Timetable allocation with real-time conflict detection and max-unit monitoring");
+        sub.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        sub.setForeground(new Color(203, 213, 225));
 
-        JPanel formPanel = new JPanel(new GridLayout(4, 4, 10, 10));
+        header.add(title, BorderLayout.NORTH);
+        header.add(sub, BorderLayout.SOUTH);
+        root.add(header, BorderLayout.NORTH);
+
+        // BODY
+        JPanel body = new JPanel(new BorderLayout(0, 12));
+        body.setOpaque(false);
+        body.setBorder(new EmptyBorder(12, 20, 15, 20));
+
+        // FORM CARD
+        JPanel formCard = new JPanel(new GridLayout(5, 4, 10, 8));
+        formCard.setBackground(Color.WHITE);
+        formCard.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(new Color(226, 232, 240), 1),
+                new EmptyBorder(12, 16, 12, 16)
+        ));
 
         cmbSubject = new JComboBox<>();
         cmbFaculty = new JComboBox<>();
         cmbRoom = new JComboBox<>();
-
         txtSection = new JTextField();
-
-        cmbTerm = new JComboBox<>(
-                new String[]{
-                    "1st Semester",
-                    "2nd Semester",
-                    "Summer"
-                }
-        );
-
-        cmbDay = new JComboBox<>(
-                new String[]{
-                    "Monday",
-                    "Tuesday",
-                    "Wednesday",
-                    "Thursday",
-                    "Friday",
-                    "Saturday"
-                }
-        );
-
+        cmbTerm = new JComboBox<>(new String[]{"2026-2027 1st Sem", "2026-2027 2nd Sem", "Summer"});
+        cmbDay = new JComboBox<>(new String[]{"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"});
         cmbStartTime = createTimeComboBox();
         cmbEndTime = createTimeComboBox();
 
-        formPanel.add(new JLabel("Subject:"));
-        formPanel.add(cmbSubject);
+        formCard.add(new JLabel("Subject:")); formCard.add(cmbSubject);
+        formCard.add(new JLabel("Faculty:")); formCard.add(cmbFaculty);
+        formCard.add(new JLabel("Room:")); formCard.add(cmbRoom);
+        formCard.add(new JLabel("Section:")); formCard.add(txtSection);
+        formCard.add(new JLabel("Term:")); formCard.add(cmbTerm);
+        formCard.add(new JLabel("Day:")); formCard.add(cmbDay);
+        formCard.add(new JLabel("Start Time:")); formCard.add(cmbStartTime);
+        formCard.add(new JLabel("End Time:")); formCard.add(cmbEndTime);
 
-        formPanel.add(new JLabel("Faculty:"));
-        formPanel.add(cmbFaculty);
+        formCard.add(new JLabel("Teaching Load:"));
+        lblFacultyLoad = new JLabel("Select an instructor");
+        lblFacultyLoad.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        formCard.add(lblFacultyLoad);
+        formCard.add(new JLabel("")); formCard.add(new JLabel(""));
 
-        formPanel.add(new JLabel("Room:"));
-        formPanel.add(cmbRoom);
+        // ACTION BUTTONS
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
+        btnPanel.setOpaque(false);
 
-        formPanel.add(new JLabel("Section:"));
-        formPanel.add(txtSection);
+        JButton btnSave = createBtn("Save", new Color(37, 99, 235));
+        JButton btnUpdate = createBtn("Update", new Color(13, 148, 136));
+        JButton btnDelete = createBtn("Delete", new Color(220, 38, 38));
+        JButton btnClear = createBtn("Clear", new Color(100, 116, 139));
 
-        formPanel.add(new JLabel("Term:"));
-        formPanel.add(cmbTerm);
+        btnPanel.add(btnSave);
+        btnPanel.add(btnUpdate);
+        btnPanel.add(btnDelete);
+        btnPanel.add(btnClear);
 
-        formPanel.add(new JLabel("Day:"));
-        formPanel.add(cmbDay);
+        JPanel formSection = new JPanel(new BorderLayout(0, 8));
+        formSection.setOpaque(false);
+        formSection.add(formCard, BorderLayout.CENTER);
+        formSection.add(btnPanel, BorderLayout.SOUTH);
+        body.add(formSection, BorderLayout.NORTH);
 
-        formPanel.add(new JLabel("Start Time:"));
-        formPanel.add(cmbStartTime);
+        // TABLE CARD
+        JPanel tableCard = new JPanel(new BorderLayout(0, 8));
+        tableCard.setBackground(Color.WHITE);
+        tableCard.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(new Color(226, 232, 240), 1),
+                new EmptyBorder(12, 16, 12, 16)
+        ));
 
-        formPanel.add(new JLabel("End Time:"));
-        formPanel.add(cmbEndTime);
+        JPanel searchBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        searchBar.setOpaque(false);
+        searchBar.add(new JLabel("Search Schedules:"));
+        txtSearch = new JTextField(18);
+        searchBar.add(txtSearch);
 
-        JPanel topPanel = new JPanel(new BorderLayout(10, 15));
-        topPanel.add(titleLabel, BorderLayout.NORTH);
-        topPanel.add(formPanel, BorderLayout.CENTER);
-
-        JPanel buttonPanel = new JPanel(
-                new FlowLayout(FlowLayout.LEFT, 10, 5)
-        );
-
-        JButton btnSave = new JButton("Save");
-        JButton btnUpdate = new JButton("Update");
-        JButton btnDelete = new JButton("Delete");
-        JButton btnClear = new JButton("Clear");
-
-        buttonPanel.add(btnSave);
-        buttonPanel.add(btnUpdate);
-        buttonPanel.add(btnDelete);
-        buttonPanel.add(btnClear);
-
-        topPanel.add(buttonPanel, BorderLayout.SOUTH);
-
-        mainPanel.add(topPanel, BorderLayout.NORTH);
-
-        // SEARCH PANEL
-
-        JPanel searchPanel = new JPanel(new BorderLayout(10, 5));
-
-        txtSearch = new JTextField();
-
-        JButton btnSearch = new JButton("Search");
-        JButton btnShowAll = new JButton("Show All");
-
-        searchPanel.add(new JLabel("Search:"), BorderLayout.WEST);
-        searchPanel.add(txtSearch, BorderLayout.CENTER);
-
-        JPanel searchButtons = new JPanel(
-                new FlowLayout(FlowLayout.LEFT, 5, 0)
-        );
-
-        searchButtons.add(btnSearch);
-        searchButtons.add(btnShowAll);
-
-        searchPanel.add(searchButtons, BorderLayout.EAST);
-
-        // TABLE
+        JButton btnSearch = createBtn("Search", new Color(30, 41, 59));
+        JButton btnShowAll = createBtn("Show All", new Color(71, 85, 105));
+        searchBar.add(btnSearch);
+        searchBar.add(btnShowAll);
+        tableCard.add(searchBar, BorderLayout.NORTH);
 
         tableModel = new DefaultTableModel(
-                new Object[]{
-                    "ID",
-                    "Subject",
-                    "Faculty",
-                    "Room",
-                    "Section",
-                    "Term",
-                    "Day",
-                    "Start",
-                    "End"
-                }, 0
+                new Object[]{"ID", "Subject", "Units", "Faculty", "Room", "Section", "Term", "Day", "Start", "End"}, 0
         ) {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return false;
-            }
+            @Override public boolean isCellEditable(int r, int c) { return false; }
         };
 
         table = new JTable(tableModel);
-        table.setRowHeight(25);
-        table.setSelectionMode(
-                ListSelectionModel.SINGLE_SELECTION
-        );
+        table.setRowHeight(26);
+        table.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
+        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
-        JScrollPane scrollPane = new JScrollPane(table);
+        tableCard.add(new JScrollPane(table), BorderLayout.CENTER);
+        body.add(tableCard, BorderLayout.CENTER);
 
-        JPanel centerPanel = new JPanel(new BorderLayout(10, 10));
+        root.add(body, BorderLayout.CENTER);
+        setContentPane(root);
 
-        centerPanel.add(searchPanel, BorderLayout.NORTH);
-        centerPanel.add(scrollPane, BorderLayout.CENTER);
-
-        mainPanel.add(centerPanel, BorderLayout.CENTER);
-
-        add(mainPanel);
-
-        // BUTTON EVENTS
-
+        // LISTENERS
         btnSave.addActionListener(e -> saveSchedule());
-
         btnUpdate.addActionListener(e -> updateSchedule());
-
         btnDelete.addActionListener(e -> deleteSchedule());
-
         btnClear.addActionListener(e -> clearForm());
-
         btnSearch.addActionListener(e -> searchSchedules());
-
         btnShowAll.addActionListener(e -> loadSchedules());
+        txtSearch.addActionListener(e -> searchSchedules());
 
-        // TABLE ROW SELECTION
+        cmbFaculty.addActionListener(e -> updateFacultyLoadDisplay());
+        cmbTerm.addActionListener(e -> updateFacultyLoadDisplay());
 
         table.getSelectionModel().addListSelectionListener(e -> {
-
-            if (!e.getValueIsAdjusting()
-                    && table.getSelectedRow() != -1) {
-
+            if (!e.getValueIsAdjusting() && table.getSelectedRow() != -1) {
                 selectSchedule();
             }
         });
     }
 
+   private JButton createBtn(String text, Color bg) {
+        JButton btn = new JButton(text);
+        btn.setUI(new javax.swing.plaf.basic.BasicButtonUI());
+        btn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btn.setBackground(bg);
+        btn.setForeground(Color.WHITE);
+        btn.setFocusPainted(false);
+        btn.setPreferredSize(new Dimension(85, 30));
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        return btn;
+    }
+
     private JComboBox<String> createTimeComboBox() {
-
         JComboBox<String> combo = new JComboBox<>();
-
-        for (int hour = 7; hour <= 20; hour++) {
-
-            for (int minute = 0; minute < 60; minute += 30) {
-
-                String period = hour >= 12 ? "PM" : "AM";
-
-                int displayHour = hour;
-
-                if (displayHour > 12) {
-                    displayHour -= 12;
-                }
-
-                if (displayHour == 0) {
-                    displayHour = 12;
-                }
-
-                String time = String.format(
-                        "%02d:%02d %s",
-                        displayHour,
-                        minute,
-                        period
-                );
-
-                combo.addItem(time);
+        for (int h = 7; h <= 20; h++) {
+            for (int m = 0; m < 60; m += 30) {
+                String period = h >= 12 ? "PM" : "AM";
+                int dh = h > 12 ? h - 12 : (h == 0 ? 12 : h);
+                combo.addItem(String.format("%02d:%02d %s", dh, m, period));
             }
         }
-
         return combo;
     }
 
-    // =========================
-    // LOAD SUBJECTS
-    // =========================
+    private void updateFacultyLoadDisplay() {
+        int idx = cmbFaculty.getSelectedIndex();
+        if (idx < 0 || idx >= facultyIds.size()) {
+            lblFacultyLoad.setText("No faculty selected");
+            lblFacultyLoad.setForeground(Color.GRAY);
+            return;
+        }
+
+        int fId = facultyIds.get(idx);
+        String term = (String) cmbTerm.getSelectedItem();
+        int units = scheduleDAO.getTotalAssignedUnits(fId, term, selectedScheduleId);
+        double hrs = scheduleDAO.getTotalAssignedHours(fId, term, selectedScheduleId);
+        int max = scheduleDAO.getFacultyMaxUnits(fId);
+
+        lblFacultyLoad.setText(String.format("Units: %d / %d  |  Hours: %.1f hrs/week", units, max, hrs));
+        if (units >= max) {
+            lblFacultyLoad.setForeground(new Color(220, 38, 38));
+        } else if (units >= max - 3) {
+            lblFacultyLoad.setForeground(new Color(217, 119, 6));
+        } else {
+            lblFacultyLoad.setForeground(new Color(22, 101, 52));
+        }
+    }
 
     private void loadSubjects() {
-
         cmbSubject.removeAllItems();
         subjectIds.clear();
-
-        String sql =
-                "SELECT subject_id, subject_code, subject_title "
-                + "FROM subjects "
-                + "ORDER BY subject_code";
-
+        String sql = "SELECT subject_id, subject_code, subject_title, units FROM subjects ORDER BY subject_code";
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pst = conn.prepareStatement(sql);
-             ResultSet rs = pst.executeQuery()) {
-
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
-
-                int id = rs.getInt("subject_id");
-
-                String display =
-                        rs.getString("subject_code")
-                        + " - "
-                        + rs.getString("subject_title");
-
-                subjectIds.add(id);
-                cmbSubject.addItem(display);
+                subjectIds.add(rs.getInt("subject_id"));
+                cmbSubject.addItem(rs.getString("subject_code") + " - " + rs.getString("subject_title") + " (" + rs.getInt("units") + "u)");
             }
-
-        } catch (SQLException e) {
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Error loading subjects:\n"
-                    + e.getMessage(),
-                    "Database Error",
-                    JOptionPane.ERROR_MESSAGE
-            );
-        }
+        } catch (SQLException e) { System.err.println(e.getMessage()); }
     }
-
-    // =========================
-    // LOAD FACULTY
-    // =========================
 
     private void loadFaculty() {
-
         cmbFaculty.removeAllItems();
         facultyIds.clear();
-
-        String sql =
-                "SELECT faculty_id, employee_no, first_name, last_name "
-                + "FROM faculty "
-                + "ORDER BY last_name, first_name";
-
+        String sql = "SELECT faculty_id, employee_no, first_name, last_name, max_units FROM faculty WHERE status = 'Active' ORDER BY last_name";
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pst = conn.prepareStatement(sql);
-             ResultSet rs = pst.executeQuery()) {
-
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
-
-                int id = rs.getInt("faculty_id");
-
-                String display =
-                        rs.getString("employee_no")
-                        + " - "
-                        + rs.getString("first_name")
-                        + " "
-                        + rs.getString("last_name");
-
-                facultyIds.add(id);
-                cmbFaculty.addItem(display);
+                facultyIds.add(rs.getInt("faculty_id"));
+                cmbFaculty.addItem(rs.getString("employee_no") + " - " + rs.getString("first_name") + " " + rs.getString("last_name") + " (Max: " + rs.getInt("max_units") + "u)");
             }
-
-        } catch (SQLException e) {
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Error loading faculty:\n"
-                    + e.getMessage(),
-                    "Database Error",
-                    JOptionPane.ERROR_MESSAGE
-            );
-        }
+        } catch (SQLException e) { System.err.println(e.getMessage()); }
     }
-
-    // =========================
-    // LOAD ROOMS
-    // =========================
 
     private void loadRooms() {
-
         cmbRoom.removeAllItems();
         roomIds.clear();
-
-        String sql =
-                "SELECT room_id, room_name "
-                + "FROM rooms "
-                + "ORDER BY room_name";
-
+        String sql = "SELECT room_id, room_name FROM rooms ORDER BY room_name";
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pst = conn.prepareStatement(sql);
-             ResultSet rs = pst.executeQuery()) {
-
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
-
-                int id = rs.getInt("room_id");
-
-                String display = rs.getString("room_name");
-
-                roomIds.add(id);
-                cmbRoom.addItem(display);
+                roomIds.add(rs.getInt("room_id"));
+                cmbRoom.addItem(rs.getString("room_name"));
             }
-
-        } catch (SQLException e) {
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Error loading rooms:\n"
-                    + e.getMessage(),
-                    "Database Error",
-                    JOptionPane.ERROR_MESSAGE
-            );
-        }
+        } catch (SQLException e) { System.err.println(e.getMessage()); }
     }
-
-    // =========================
-    // SAVE
-    // =========================
 
     private void saveSchedule() {
+        Schedule sched = getScheduleFromForm();
+        if (sched == null) return;
 
-        Schedule schedule = getScheduleFromForm();
+        if (isOverloaded(sched, -1)) return;
+        if (ConflictChecker.hasConflict(this, sched, -1)) return;
 
-        if (schedule == null) {
-            return;
-        }
-
-        if (scheduleDAO.addSchedule(schedule)) {
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Schedule added successfully."
-            );
-
+        if (scheduleDAO.addSchedule(sched)) {
+            JOptionPane.showMessageDialog(this, "Schedule added successfully.");
             clearForm();
             loadSchedules();
-
         } else {
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Failed to add schedule.",
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE
-            );
+            JOptionPane.showMessageDialog(this, "Failed to add schedule.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
-
-    // =========================
-    // UPDATE
-    // =========================
 
     private void updateSchedule() {
-
         if (selectedScheduleId == -1) {
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Please select a schedule first."
-            );
-
+            JOptionPane.showMessageDialog(this, "Please select a schedule to update.");
             return;
         }
+        Schedule sched = getScheduleFromForm();
+        if (sched == null) return;
+        sched.setScheduleId(selectedScheduleId);
 
-        Schedule schedule = getScheduleFromForm();
+        if (isOverloaded(sched, selectedScheduleId)) return;
+        if (ConflictChecker.hasConflict(this, sched, selectedScheduleId)) return;
 
-        if (schedule == null) {
-            return;
-        }
-
-        schedule.setScheduleId(selectedScheduleId);
-
-        if (scheduleDAO.updateSchedule(schedule)) {
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Schedule updated successfully."
-            );
-
+        if (scheduleDAO.updateSchedule(sched)) {
+            JOptionPane.showMessageDialog(this, "Schedule updated successfully.");
             clearForm();
             loadSchedules();
-
         } else {
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Failed to update schedule.",
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE
-            );
+            JOptionPane.showMessageDialog(this, "Failed to update schedule.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
-    // =========================
-    // DELETE
-    // =========================
+    private boolean isOverloaded(Schedule s, int excludeId) {
+        int u = scheduleDAO.getSubjectUnits(s.getSubjectId());
+        int cur = scheduleDAO.getTotalAssignedUnits(s.getFacultyId(), s.getTerm(), excludeId);
+        int max = scheduleDAO.getFacultyMaxUnits(s.getFacultyId());
+        if (cur + u > max) {
+            JOptionPane.showMessageDialog(this,
+                    String.format("Faculty Overload Error!\n\nSubject: %d unit(s)\nCurrent: %d unit(s)\nMax Limit: %d unit(s)", u, cur, max),
+                    "Max Load Exceeded", JOptionPane.WARNING_MESSAGE);
+            return true;
+        }
+        return false;
+    }
 
     private void deleteSchedule() {
-
         if (selectedScheduleId == -1) {
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Please select a schedule first."
-            );
-
+            JOptionPane.showMessageDialog(this, "Please select a schedule to delete.");
             return;
         }
-
-        int confirm = JOptionPane.showConfirmDialog(
-                this,
-                "Are you sure you want to delete this schedule?",
-                "Confirm Delete",
-                JOptionPane.YES_NO_OPTION
-        );
-
-        if (confirm != JOptionPane.YES_OPTION) {
-            return;
-        }
+        if (JOptionPane.showConfirmDialog(this, "Are you sure you want to delete this schedule?", "Confirm Delete", JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION) return;
 
         if (scheduleDAO.deleteSchedule(selectedScheduleId)) {
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Schedule deleted successfully."
-            );
-
+            JOptionPane.showMessageDialog(this, "Schedule deleted.");
             clearForm();
             loadSchedules();
-
-        } else {
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Failed to delete schedule.",
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE
-            );
         }
     }
-
-    // =========================
-    // GET FORM DATA
-    // =========================
 
     private Schedule getScheduleFromForm() {
-
-        if (cmbSubject.getSelectedIndex() == -1) {
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Please select a subject."
-            );
-
+        if (cmbSubject.getSelectedIndex() == -1 || cmbFaculty.getSelectedIndex() == -1 || cmbRoom.getSelectedIndex() == -1) {
+            JOptionPane.showMessageDialog(this, "Please make sure Subject, Faculty, and Room are all selected.");
             return null;
         }
-
-        if (cmbFaculty.getSelectedIndex() == -1) {
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Please select a faculty member."
-            );
-
-            return null;
-        }
-
-        if (cmbRoom.getSelectedIndex() == -1) {
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Please select a room."
-            );
-
-            return null;
-        }
-
         String section = txtSection.getText().trim();
-
         if (section.isEmpty()) {
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Please enter a section."
-            );
-
-            txtSection.requestFocus();
-
+            JOptionPane.showMessageDialog(this, "Please enter a class section.");
+            return null;
+        }
+        Time st = convertToTime((String) cmbStartTime.getSelectedItem());
+        Time et = convertToTime((String) cmbEndTime.getSelectedItem());
+        if (!et.after(st)) {
+            JOptionPane.showMessageDialog(this, "End time must be later than start time.", "Invalid Time", JOptionPane.ERROR_MESSAGE);
             return null;
         }
 
-        String startText =
-                (String) cmbStartTime.getSelectedItem();
-
-        String endText =
-                (String) cmbEndTime.getSelectedItem();
-
-        Time startTime = convertToTime(startText);
-        Time endTime = convertToTime(endText);
-
-        // IMPORTANT VALIDATION
-        if (!endTime.after(startTime)) {
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "End time must be later than start time.",
-                    "Invalid Time",
-                    JOptionPane.ERROR_MESSAGE
-            );
-
-            return null;
-        }
-
-        Schedule schedule = new Schedule();
-
-        schedule.setSubjectId(
-                subjectIds.get(cmbSubject.getSelectedIndex())
-        );
-
-        schedule.setFacultyId(
-                facultyIds.get(cmbFaculty.getSelectedIndex())
-        );
-
-        schedule.setRoomId(
-                roomIds.get(cmbRoom.getSelectedIndex())
-        );
-
-        schedule.setSection(section);
-
-        schedule.setTerm(
-                (String) cmbTerm.getSelectedItem()
-        );
-
-        schedule.setDayOfWeek(
-                (String) cmbDay.getSelectedItem()
-        );
-
-        schedule.setStartTime(startTime);
-        schedule.setEndTime(endTime);
-
-        return schedule;
+        Schedule s = new Schedule();
+        s.setSubjectId(subjectIds.get(cmbSubject.getSelectedIndex()));
+        s.setFacultyId(facultyIds.get(cmbFaculty.getSelectedIndex()));
+        s.setRoomId(roomIds.get(cmbRoom.getSelectedIndex()));
+        s.setSection(section);
+        s.setTerm((String) cmbTerm.getSelectedItem());
+        s.setDayOfWeek((String) cmbDay.getSelectedItem());
+        s.setStartTime(st);
+        s.setEndTime(et);
+        return s;
     }
 
-    // =========================
-    // CONVERT TIME
-    // =========================
-
-    private Time convertToTime(String timeText) {
-
-        try {
-
-            String[] parts = timeText.split(" ");
-
-            String[] hm = parts[0].split(":");
-
-            int hour = Integer.parseInt(hm[0]);
-            int minute = Integer.parseInt(hm[1]);
-
-            String period = parts[1];
-
-            if (period.equals("PM") && hour != 12) {
-                hour += 12;
-            }
-
-            if (period.equals("AM") && hour == 12) {
-                hour = 0;
-            }
-
-            return Time.valueOf(
-                    String.format(
-                            "%02d:%02d:00",
-                            hour,
-                            minute
-                    )
-            );
-
-        } catch (Exception e) {
-
-            return Time.valueOf("00:00:00");
-        }
+    private Time convertToTime(String t) {
+        String[] parts = t.split(" ");
+        String[] hm = parts[0].split(":");
+        int h = Integer.parseInt(hm[0]);
+        int m = Integer.parseInt(hm[1]);
+        if (parts[1].equals("PM") && h != 12) h += 12;
+        if (parts[1].equals("AM") && h == 12) h = 0;
+        return Time.valueOf(String.format("%02d:%02d:00", h, m));
     }
-
-    // =========================
-    // LOAD TABLE
-    // =========================
 
     private void loadSchedules() {
-
         tableModel.setRowCount(0);
-
-        String sql =
-                "SELECT "
-                + "s.schedule_id, "
-                + "s.section, "
-                + "s.term, "
-                + "s.day_of_week, "
-                + "s.start_time, "
-                + "s.end_time, "
-                + "sub.subject_code, "
-                + "sub.subject_title, "
-                + "f.employee_no, "
-                + "f.first_name, "
-                + "f.last_name, "
-                + "r.room_name "
-                + "FROM schedules s "
-                + "INNER JOIN subjects sub "
-                + "ON s.subject_id = sub.subject_id "
-                + "LEFT JOIN faculty f "
-                + "ON s.faculty_id = f.faculty_id "
-                + "INNER JOIN rooms r "
-                + "ON s.room_id = r.room_id "
-                + "ORDER BY s.day_of_week, s.start_time";
+        String sql = "SELECT s.schedule_id, s.section, s.term, s.day_of_week, s.start_time, s.end_time, "
+                   + "       sub.subject_code, sub.units, f.first_name, f.last_name, r.room_name "
+                   + "FROM schedules s "
+                   + "INNER JOIN subjects sub ON s.subject_id = sub.subject_id "
+                   + "LEFT JOIN faculty f ON s.faculty_id = f.faculty_id "
+                   + "INNER JOIN rooms r ON s.room_id = r.room_id "
+                   + "ORDER BY s.day_of_week, s.start_time";
 
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pst = conn.prepareStatement(sql);
-             ResultSet rs = pst.executeQuery()) {
-
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
-
-                String facultyName =
-                        rs.getString("first_name")
-                        + " "
-                        + rs.getString("last_name");
-
+                String fname = rs.getString("first_name") != null ? rs.getString("first_name") + " " + rs.getString("last_name") : "Unassigned";
                 tableModel.addRow(new Object[]{
-                    rs.getInt("schedule_id"),
-                    rs.getString("subject_code"),
-                    facultyName,
-                    rs.getString("room_name"),
-                    rs.getString("section"),
-                    rs.getString("term"),
-                    rs.getString("day_of_week"),
-                    rs.getTime("start_time"),
-                    rs.getTime("end_time")
+                    rs.getInt("schedule_id"), rs.getString("subject_code"), rs.getInt("units"),
+                    fname, rs.getString("room_name"), rs.getString("section"), rs.getString("term"),
+                    rs.getString("day_of_week"), rs.getTime("start_time"), rs.getTime("end_time")
                 });
             }
-
-        } catch (SQLException e) {
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Error loading schedules:\n"
-                    + e.getMessage(),
-                    "Database Error",
-                    JOptionPane.ERROR_MESSAGE
-            );
-        }
+        } catch (SQLException e) { System.err.println(e.getMessage()); }
     }
-
-    // =========================
-    // SEARCH
-    // =========================
 
     private void searchSchedules() {
-
-        String keyword = txtSearch.getText().trim();
-
-        if (keyword.isEmpty()) {
-
-            loadSchedules();
-
-            return;
-        }
-
+        String kw = txtSearch.getText().trim();
+        if (kw.isEmpty()) { loadSchedules(); return; }
         tableModel.setRowCount(0);
-
-        String sql =
-                "SELECT "
-                + "s.schedule_id, "
-                + "s.section, "
-                + "s.term, "
-                + "s.day_of_week, "
-                + "s.start_time, "
-                + "s.end_time, "
-                + "sub.subject_code, "
-                + "sub.subject_title, "
-                + "f.first_name, "
-                + "f.last_name, "
-                + "r.room_name "
-                + "FROM schedules s "
-                + "INNER JOIN subjects sub "
-                + "ON s.subject_id = sub.subject_id "
-                + "LEFT JOIN faculty f "
-                + "ON s.faculty_id = f.faculty_id "
-                + "INNER JOIN rooms r "
-                + "ON s.room_id = r.room_id "
-                + "WHERE LOWER(sub.subject_code) LIKE ? "
-                + "OR LOWER(sub.subject_title) LIKE ? "
-                + "OR LOWER(s.section) LIKE ? "
-                + "OR LOWER(s.term) LIKE ? "
-                + "OR LOWER(s.day_of_week) LIKE ? "
-                + "OR LOWER(r.room_name) LIKE ? "
-                + "ORDER BY s.day_of_week, s.start_time";
+        String sql = "SELECT s.schedule_id, s.section, s.term, s.day_of_week, s.start_time, s.end_time, "
+                   + "       sub.subject_code, sub.units, f.first_name, f.last_name, r.room_name "
+                   + "FROM schedules s "
+                   + "INNER JOIN subjects sub ON s.subject_id = sub.subject_id "
+                   + "LEFT JOIN faculty f ON s.faculty_id = f.faculty_id "
+                   + "INNER JOIN rooms r ON s.room_id = r.room_id "
+                   + "WHERE LOWER(sub.subject_code) LIKE ? OR LOWER(s.section) LIKE ? OR LOWER(r.room_name) LIKE ? "
+                   + "ORDER BY s.day_of_week, s.start_time";
 
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pst = conn.prepareStatement(sql)) {
-
-            String search = "%" + keyword.toLowerCase() + "%";
-
-            for (int i = 1; i <= 6; i++) {
-                pst.setString(i, search);
-            }
-
-            ResultSet rs = pst.executeQuery();
-
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            String p = "%" + kw.toLowerCase() + "%";
+            ps.setString(1, p); ps.setString(2, p); ps.setString(3, p);
+            ResultSet rs = ps.executeQuery();
             while (rs.next()) {
-
-                String facultyName =
-                        rs.getString("first_name")
-                        + " "
-                        + rs.getString("last_name");
-
+                String fname = rs.getString("first_name") != null ? rs.getString("first_name") + " " + rs.getString("last_name") : "Unassigned";
                 tableModel.addRow(new Object[]{
-                    rs.getInt("schedule_id"),
-                    rs.getString("subject_code"),
-                    facultyName,
-                    rs.getString("room_name"),
-                    rs.getString("section"),
-                    rs.getString("term"),
-                    rs.getString("day_of_week"),
-                    rs.getTime("start_time"),
-                    rs.getTime("end_time")
+                    rs.getInt("schedule_id"), rs.getString("subject_code"), rs.getInt("units"),
+                    fname, rs.getString("room_name"), rs.getString("section"), rs.getString("term"),
+                    rs.getString("day_of_week"), rs.getTime("start_time"), rs.getTime("end_time")
                 });
             }
-
-        } catch (SQLException e) {
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Error searching schedules:\n"
-                    + e.getMessage(),
-                    "Database Error",
-                    JOptionPane.ERROR_MESSAGE
-            );
-        }
+        } catch (SQLException e) { System.err.println(e.getMessage()); }
     }
-
-    // =========================
-    // SELECT TABLE ROW
-    // =========================
 
     private void selectSchedule() {
+        int r = table.getSelectedRow();
+        if (r == -1) return;
 
-        int row = table.getSelectedRow();
-
-        if (row == -1) {
-            return;
-        }
-
-        selectedScheduleId =
-                Integer.parseInt(
-                        tableModel.getValueAt(row, 0).toString()
-                );
-
-        String subjectCode =
-                tableModel.getValueAt(row, 1).toString();
-
-        String facultyName =
-                tableModel.getValueAt(row, 2).toString();
-
-        String roomName =
-                tableModel.getValueAt(row, 3).toString();
-
-        String section =
-                tableModel.getValueAt(row, 4).toString();
-
-        String term =
-                tableModel.getValueAt(row, 5).toString();
-
-        String day =
-                tableModel.getValueAt(row, 6).toString();
-
-        Time startTime =
-                (Time) tableModel.getValueAt(row, 7);
-
-        Time endTime =
-                (Time) tableModel.getValueAt(row, 8);
-
-        txtSection.setText(section);
-
-        cmbTerm.setSelectedItem(term);
-        cmbDay.setSelectedItem(day);
-
-        cmbSubject.setSelectedItem(findSubject(subjectCode));
-
-        cmbFaculty.setSelectedItem(findFaculty(facultyName));
-
-        cmbRoom.setSelectedItem(roomName);
-
-        cmbStartTime.setSelectedItem(
-                formatTime(startTime)
-        );
-
-        cmbEndTime.setSelectedItem(
-                formatTime(endTime)
-        );
-    }
-
-    private String findSubject(String subjectCode) {
+        selectedScheduleId = Integer.parseInt(tableModel.getValueAt(r, 0).toString());
+        String code = tableModel.getValueAt(r, 1).toString();
+        String faculty = tableModel.getValueAt(r, 3).toString();
+        String room = tableModel.getValueAt(r, 4).toString();
+        txtSection.setText(tableModel.getValueAt(r, 5).toString());
+        cmbTerm.setSelectedItem(tableModel.getValueAt(r, 6).toString());
+        cmbDay.setSelectedItem(tableModel.getValueAt(r, 7).toString());
 
         for (int i = 0; i < cmbSubject.getItemCount(); i++) {
-
-            String item = cmbSubject.getItemAt(i);
-
-            if (item.startsWith(subjectCode + " - ")) {
-                return item;
-            }
+            if (cmbSubject.getItemAt(i).startsWith(code + " - ")) { cmbSubject.setSelectedIndex(i); break; }
         }
-
-        return null;
-    }
-
-    private String findFaculty(String facultyName) {
-
         for (int i = 0; i < cmbFaculty.getItemCount(); i++) {
-
-            String item = cmbFaculty.getItemAt(i);
-
-            if (item.endsWith(" - " + facultyName)) {
-                return item;
-            }
+            if (cmbFaculty.getItemAt(i).contains(faculty)) { cmbFaculty.setSelectedIndex(i); break; }
         }
+        cmbRoom.setSelectedItem(room);
 
-        return null;
+        Time st = (Time) tableModel.getValueAt(r, 8);
+        Time et = (Time) tableModel.getValueAt(r, 9);
+        cmbStartTime.setSelectedItem(formatTime(st));
+        cmbEndTime.setSelectedItem(formatTime(et));
+        updateFacultyLoadDisplay();
     }
 
-    private String formatTime(Time time) {
-
-        if (time == null) {
-            return "";
-        }
-
-        String[] parts = time.toString().split(":");
-
-        int hour = Integer.parseInt(parts[0]);
-        int minute = Integer.parseInt(parts[1]);
-
-        String period = hour >= 12 ? "PM" : "AM";
-
-        int displayHour = hour;
-
-        if (displayHour > 12) {
-            displayHour -= 12;
-        }
-
-        if (displayHour == 0) {
-            displayHour = 12;
-        }
-
-        return String.format(
-                "%02d:%02d %s",
-                displayHour,
-                minute,
-                period
-        );
+    private String formatTime(Time t) {
+        String[] p = t.toString().split(":");
+        int h = Integer.parseInt(p[0]);
+        int m = Integer.parseInt(p[1]);
+        String period = h >= 12 ? "PM" : "AM";
+        int dh = h > 12 ? h - 12 : (h == 0 ? 12 : h);
+        return String.format("%02d:%02d %s", dh, m, period);
     }
-
-    // =========================
-    // CLEAR
-    // =========================
 
     private void clearForm() {
-
         selectedScheduleId = -1;
-
         txtSection.setText("");
-
-        if (cmbSubject.getItemCount() > 0) {
-            cmbSubject.setSelectedIndex(0);
-        }
-
-        if (cmbFaculty.getItemCount() > 0) {
-            cmbFaculty.setSelectedIndex(0);
-        }
-
-        if (cmbRoom.getItemCount() > 0) {
-            cmbRoom.setSelectedIndex(0);
-        }
-
+        if (cmbSubject.getItemCount() > 0) cmbSubject.setSelectedIndex(0);
+        if (cmbFaculty.getItemCount() > 0) cmbFaculty.setSelectedIndex(0);
+        if (cmbRoom.getItemCount() > 0) cmbRoom.setSelectedIndex(0);
         cmbTerm.setSelectedIndex(0);
         cmbDay.setSelectedIndex(0);
         cmbStartTime.setSelectedIndex(0);
         cmbEndTime.setSelectedIndex(0);
-
         table.clearSelection();
+        updateFacultyLoadDisplay();
     }
 }

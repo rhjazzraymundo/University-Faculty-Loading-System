@@ -176,4 +176,108 @@ public class ScheduleDAO {
 
         return schedules;
     }
+    // ==========================================
+    // DAY 6: TEACHING LOAD CALCULATIONS & RULES
+    // ==========================================
+
+    /**
+     * Calculates total units currently assigned to a faculty in a given term.
+     * excludeScheduleId is used when updating so the current record isn't double-counted (pass -1 when adding).
+     */
+    public int getTotalAssignedUnits(int facultyId, String term, int excludeScheduleId) {
+        String sql = "SELECT COALESCE(SUM(sub.units), 0) AS total_units "
+                   + "FROM schedules s "
+                   + "INNER JOIN subjects sub ON s.subject_id = sub.subject_id "
+                   + "WHERE s.faculty_id = ? AND s.term = ? AND s.schedule_id <> ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pst = conn.prepareStatement(sql)) {
+
+            pst.setInt(1, facultyId);
+            pst.setString(2, term);
+            pst.setInt(3, excludeScheduleId);
+
+            try (ResultSet rs = pst.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("total_units");
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error calculating faculty units: " + e.getMessage());
+        }
+        return 0;
+    }
+
+    /**
+     * Calculates total weekly hours assigned to a faculty in a given term.
+     */
+    public double getTotalAssignedHours(int facultyId, String term, int excludeScheduleId) {
+        String sql = "SELECT s.start_time, s.end_time "
+                   + "FROM schedules s "
+                   + "WHERE s.faculty_id = ? AND s.term = ? AND s.schedule_id <> ?";
+
+        double totalHours = 0.0;
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pst = conn.prepareStatement(sql)) {
+
+            pst.setInt(1, facultyId);
+            pst.setString(2, term);
+            pst.setInt(3, excludeScheduleId);
+
+            try (ResultSet rs = pst.executeQuery()) {
+                while (rs.next()) {
+                    Time start = rs.getTime("start_time");
+                    Time end = rs.getTime("end_time");
+                    if (start != null && end != null) {
+                        long diffMillis = end.getTime() - start.getTime();
+                        totalHours += diffMillis / (1000.0 * 60 * 60);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error calculating faculty hours: " + e.getMessage());
+        }
+        return totalHours;
+    }
+
+    /**
+     * Gets the number of units for a specific subject.
+     */
+    public int getSubjectUnits(int subjectId) {
+        String sql = "SELECT units FROM subjects WHERE subject_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pst = conn.prepareStatement(sql)) {
+
+            pst.setInt(1, subjectId);
+            try (ResultSet rs = pst.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("units");
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error fetching subject units: " + e.getMessage());
+        }
+        return 0;
+    }
+
+    /**
+     * Gets the maximum unit load allowed for a faculty member.
+     */
+    public int getFacultyMaxUnits(int facultyId) {
+        String sql = "SELECT max_units FROM faculty WHERE faculty_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pst = conn.prepareStatement(sql)) {
+
+            pst.setInt(1, facultyId);
+            try (ResultSet rs = pst.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("max_units");
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error fetching faculty max units: " + e.getMessage());
+        }
+        return 24; // Default fallback
+    }
 }

@@ -3,301 +3,294 @@ package ui;
 import database.DatabaseConnection;
 import model.User;
 
-import java.awt.BorderLayout;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.GridLayout;
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
+import java.awt.*;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-import javax.swing.BorderFactory;
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.SwingConstants;
-
 public class DashboardFrame extends JFrame {
 
     private final User currentUser;
 
-    private final JLabel lblFacultyCount =
-            new JLabel("0", SwingConstants.CENTER);
-
-    private final JLabel lblSubjectCount =
-            new JLabel("0", SwingConstants.CENTER);
-
-    private final JLabel lblDepartmentCount =
-            new JLabel("0", SwingConstants.CENTER);
-
-    private final JLabel lblRoomCount =
-            new JLabel("0", SwingConstants.CENTER);
+    private final JLabel lblFacultyCount = new JLabel("0", SwingConstants.CENTER);
+    private final JLabel lblSubjectCount = new JLabel("0", SwingConstants.CENTER);
+    private final JLabel lblDepartmentCount = new JLabel("0", SwingConstants.CENTER);
+    private final JLabel lblRoomCount = new JLabel("0", SwingConstants.CENTER);
 
     public DashboardFrame(User user) {
-
         super("University Faculty Loading System - Dashboard");
-
         this.currentUser = user;
 
-        setDefaultCloseOperation(
-                JFrame.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setSize(960, 640);
+        setLocationRelativeTo(null);
 
         buildUI();
-
         loadCounts();
-
-        setSize(900, 600);
-        setLocationRelativeTo(null);
     }
 
     private void buildUI() {
+        JPanel root = new JPanel(new BorderLayout(0, 0));
+        root.setBackground(new Color(241, 245, 249)); // Clean light slate background
 
-        JPanel root =
-                new JPanel(new BorderLayout(10, 10));
+        // =====================================================================
+        // 1. TOP HEADER BANNER (Title, User Details, Logout)
+        // =====================================================================
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(new Color(30, 41, 59)); // Professional Navy Slate
+        headerPanel.setBorder(new EmptyBorder(16, 24, 16, 24));
 
-        root.setBorder(
-                BorderFactory.createEmptyBorder(
-                        15, 15, 15, 15));
+        JPanel headerTextPanel = new JPanel(new GridLayout(2, 1, 3, 3));
+        headerTextPanel.setOpaque(false);
 
-        // ==============================
-        // TOP
-        // ==============================
+        JLabel lblTitle = new JLabel("UNIVERSITY FACULTY LOADING SYSTEM");
+        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        lblTitle.setForeground(Color.WHITE);
 
-        JPanel top =
-                new JPanel(new BorderLayout());
+        String roleTag = currentUser.isAdmin() ? "Administrator (Full Access)" : "Staff (Scheduling & Reports)";
+        JLabel lblUser = new JLabel("Welcome, " + currentUser.getFullName() + "  |  Role: " + roleTag);
+        lblUser.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        lblUser.setForeground(new Color(203, 213, 225));
 
-        JLabel title =
-                new JLabel(
-                        "UNIVERSITY FACULTY LOADING SYSTEM",
-                        SwingConstants.CENTER);
+        headerTextPanel.add(lblTitle);
+        headerTextPanel.add(lblUser);
 
-        title.setFont(
-                title.getFont().deriveFont(
-                        Font.BOLD, 22f));
+        JButton btnLogout = new JButton("Logout");
+        btnLogout.setUI(new javax.swing.plaf.basic.BasicButtonUI());
+        btnLogout.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnLogout.setBackground(new Color(220, 38, 38)); // Crimson red
+        btnLogout.setForeground(Color.WHITE);
+        btnLogout.setFocusPainted(false);
+        btnLogout.setPreferredSize(new Dimension(85, 30));
+        btnLogout.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnLogout.addActionListener(e -> logout());
 
-        JLabel welcome =
-                new JLabel(
-                        "Welcome, "
-                        + currentUser.getFullName()
-                        + " | Role: "
-                        + currentUser.getRole(),
-                        SwingConstants.CENTER);
+        headerPanel.add(headerTextPanel, BorderLayout.WEST);
+        headerPanel.add(btnLogout, BorderLayout.EAST);
 
-        top.add(title,
-                BorderLayout.NORTH);
+        root.add(headerPanel, BorderLayout.NORTH);
 
-        top.add(welcome,
-                BorderLayout.SOUTH);
+        // =====================================================================
+        // 2. MAIN CENTER CONTENT
+        // =====================================================================
+        JPanel centerPanel = new JPanel(new BorderLayout(0, 20));
+        centerPanel.setOpaque(false);
+        centerPanel.setBorder(new EmptyBorder(20, 24, 20, 24));
 
-        root.add(top,
-                BorderLayout.NORTH);
+        // ROW OF 4 METRIC CARDS
+        JPanel cardsRow = new JPanel(new GridLayout(1, 4, 16, 0));
+        cardsRow.setOpaque(false);
+        cardsRow.setPreferredSize(new Dimension(900, 110)); // Prevents stretching!
 
-        // ==============================
-        // COUNTS
-        // ==============================
+        cardsRow.add(createStatCard("FACULTY", lblFacultyCount, "Active Instructors", new Color(37, 99, 235)));
+        cardsRow.add(createStatCard("SUBJECTS", lblSubjectCount, "Curriculum Courses", new Color(13, 148, 136)));
+        cardsRow.add(createStatCard("DEPARTMENTS", lblDepartmentCount, "Academic Units", new Color(217, 119, 6)));
+        cardsRow.add(createStatCard("ROOMS", lblRoomCount, "Lecture & Lab Rooms", new Color(124, 58, 237)));
 
-        JPanel cards =
-                new JPanel(new GridLayout(
-                        1, 4, 15, 15));
+        centerPanel.add(cardsRow, BorderLayout.NORTH);
 
-        cards.add(
-                createCountCard(
-                        "FACULTY",
-                        lblFacultyCount));
+        // MODULE NAVIGATION SECTION
+        JPanel moduleSection = new JPanel(new BorderLayout(0, 10));
+        moduleSection.setOpaque(false);
 
-        cards.add(
-                createCountCard(
-                        "SUBJECTS",
-                        lblSubjectCount));
+        JLabel lblSection = new JLabel("SYSTEM MODULES & MANAGEMENT");
+        lblSection.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lblSection.setForeground(new Color(51, 65, 85));
+        moduleSection.add(lblSection, BorderLayout.NORTH);
 
-        cards.add(
-                createCountCard(
-                        "DEPARTMENTS",
-                        lblDepartmentCount));
+        JPanel moduleGrid = new JPanel(new GridLayout(2, 3, 14, 14));
+        moduleGrid.setOpaque(false);
 
-        cards.add(
-                createCountCard(
-                        "ROOMS",
-                        lblRoomCount));
+        boolean isAdmin = currentUser.isAdmin();
 
-        root.add(cards,
-                BorderLayout.CENTER);
+        JButton btnFaculty = createNavButton("Faculty Management", "Manage instructor profiles & max load", isAdmin);
+        JButton btnSubjects = createNavButton("Subjects & Curriculum", "Course codes, titles & unit weights", isAdmin);
+        JButton btnDepartments = createNavButton("Department Registry", "Academic departments and codes", isAdmin);
+        JButton btnRooms = createNavButton("Rooms & Facilities", "Classroom capacities & room types", isAdmin);
+        JButton btnSchedule = createNavButton("Faculty Loading & Schedules", "Assign classes and check time conflicts", true);
+        JButton btnReports = createNavButton("Reports & Timetables", "Faculty load summary & room usage", true);
 
-        // ==============================
-        // MENU
-        // ==============================
+        moduleGrid.add(btnFaculty);
+        moduleGrid.add(btnSubjects);
+        moduleGrid.add(btnDepartments);
+        moduleGrid.add(btnRooms);
+        moduleGrid.add(btnSchedule);
+        moduleGrid.add(btnReports);
 
-        JPanel menu =
-                new JPanel();
+        moduleSection.add(moduleGrid, BorderLayout.CENTER);
+        centerPanel.add(moduleSection, BorderLayout.CENTER);
 
-        JButton btnFaculty =
-                new JButton("Faculty");
+        root.add(centerPanel, BorderLayout.CENTER);
 
-        JButton btnSubjects =
-                new JButton("Subjects");
+        // =====================================================================
+        // 3. STATUS FOOTER
+        // =====================================================================
+        JPanel footer = new JPanel(new BorderLayout());
+        footer.setBackground(Color.WHITE);
+        footer.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(new Color(226, 232, 240), 1),
+                new EmptyBorder(8, 24, 8, 24)
+        ));
 
-        JButton btnDepartments =
-                new JButton("Departments");
+        JLabel lblFooter = new JLabel("Database: Apache Derby (Port 1527)  |  Faculty Loading System v1.0");
+        lblFooter.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        lblFooter.setForeground(new Color(100, 116, 139));
 
-        JButton btnRooms =
-                new JButton("Rooms");
-        
-        JButton btnSchedule = 
-                new JButton("Schedules");
+        JButton btnRefresh = new JButton("Refresh Data");
+        btnRefresh.setUI(new javax.swing.plaf.basic.BasicButtonUI());
+        btnRefresh.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        btnRefresh.setBackground(new Color(30, 41, 59));
+        btnRefresh.setForeground(Color.WHITE);
+        btnRefresh.setPreferredSize(new Dimension(110, 26));
+        btnRefresh.addActionListener(e -> loadCounts());
 
-        JButton btnLogout =
-                new JButton("Logout");
+        footer.add(lblFooter, BorderLayout.WEST);
+        footer.add(btnRefresh, BorderLayout.EAST);
 
-        menu.add(btnFaculty);
-        menu.add(btnSubjects);
-        menu.add(btnDepartments);
-        menu.add(btnRooms);
-        menu.add(btnSchedule);
-        menu.add(btnLogout);
+        root.add(footer, BorderLayout.SOUTH);
 
-        root.add(menu,
-                BorderLayout.SOUTH);
-
-        btnFaculty.addActionListener(
-                e -> openFaculty());
-
-        btnLogout.addActionListener(
-                e -> logout());
-
-    
-        btnSubjects.addActionListener(e -> {
-         SubjectFrame subjectFrame = new SubjectFrame();
-             subjectFrame.setVisible(true);
+        // =====================================================================
+        // NAVIGATION ACTIONS (WITH ROLE ACCESS CHECK)
+        // =====================================================================
+        btnFaculty.addActionListener(e -> {
+            if (!isAdmin) {
+                showAccessDenied("Only Administrators can modify Faculty records.");
+                return;
+            }
+            new FacultyFrame().setVisible(true);
         });
-       btnSchedule.addActionListener(e -> {
-         ScheduleFrame scheduleFrame = new ScheduleFrame();
-             scheduleFrame.setVisible(true);
-});
-        btnDepartments.addActionListener(e ->
-                JOptionPane.showMessageDialog(
-                        this,
-                        "Department module will be added next."));
 
-        btnRooms.addActionListener(e ->
-                JOptionPane.showMessageDialog(
-                        this,
-                        "Room module will be added next."));
+        btnSubjects.addActionListener(e -> {
+            if (!isAdmin) {
+                showAccessDenied("Only Administrators can modify Subjects.");
+                return;
+            }
+            new SubjectFrame().setVisible(true);
+        });
+
+        btnDepartments.addActionListener(e -> {
+            if (!isAdmin) {
+                showAccessDenied("Only Administrators can manage Departments.");
+                return;
+            }
+            new DepartmentDialog(this).setVisible(true);
+            loadCounts();
+        });
+
+        btnRooms.addActionListener(e -> {
+            if (!isAdmin) {
+                showAccessDenied("Only Administrators can manage Rooms.");
+                return;
+            }
+            new RoomDialog(this).setVisible(true);
+            loadCounts();
+        });
+
+        btnSchedule.addActionListener(e -> new ScheduleFrame().setVisible(true));
+        btnReports.addActionListener(e -> new ReportsFrame().setVisible(true));
 
         setContentPane(root);
     }
 
-    private JPanel createCountCard(
-            String title,
-            JLabel countLabel) {
+    // =========================================================================
+    // STAT CARD HELPER (Standard Swing/AWT components)
+    // =========================================================================
+    private JPanel createStatCard(String title, JLabel countLabel, String subtitle, Color themeColor) {
+        JPanel card = new JPanel(new BorderLayout(4, 4));
+        card.setBackground(Color.WHITE);
+        card.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(new Color(226, 232, 240), 1),
+                new EmptyBorder(10, 14, 10, 14)
+        ));
 
-        JPanel card =
-                new JPanel(new BorderLayout());
+        JLabel lblTitle = new JLabel(title);
+        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        lblTitle.setForeground(themeColor);
 
-        card.setBorder(
-                BorderFactory.createTitledBorder(
-                        title));
+        countLabel.setFont(new Font("Segoe UI", Font.BOLD, 32));
+        countLabel.setForeground(new Color(30, 41, 59));
 
-        countLabel.setFont(
-                countLabel.getFont().deriveFont(
-                        Font.BOLD, 36f));
+        JLabel lblSub = new JLabel(subtitle, SwingConstants.CENTER);
+        lblSub.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        lblSub.setForeground(new Color(148, 163, 184));
 
-        card.add(
-                countLabel,
-                BorderLayout.CENTER);
+        card.add(lblTitle, BorderLayout.NORTH);
+        card.add(countLabel, BorderLayout.CENTER);
+        card.add(lblSub, BorderLayout.SOUTH);
 
         return card;
     }
 
-    // ==============================
-    // COUNTS
-    // ==============================
+    // =========================================================================
+    // NAVIGATION BUTTON HELPER (Standard JButton + Fonts)
+    // =========================================================================
+    private JButton createNavButton(String title, String subtitle, boolean enabled) {
+        JButton btn = new JButton();
+        btn.setLayout(new GridLayout(2, 1, 2, 2));
+        btn.setBackground(Color.WHITE);
+        btn.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(new Color(226, 232, 240), 1),
+                new EmptyBorder(12, 16, 12, 16)
+        ));
+        btn.setFocusPainted(false);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        JLabel lblMain = new JLabel(title);
+        lblMain.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lblMain.setForeground(enabled ? new Color(30, 41, 59) : new Color(148, 163, 184));
+
+        JLabel lblSub = new JLabel(subtitle);
+        lblSub.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        lblSub.setForeground(new Color(100, 116, 139));
+
+        btn.add(lblMain);
+        btn.add(lblSub);
+
+        return btn;
+    }
+
+    private void showAccessDenied(String message) {
+        JOptionPane.showMessageDialog(this,
+                "Access Denied!\n\n" + message + "\nYour current role is: " + currentUser.getRole(),
+                "Permission Restricted",
+                JOptionPane.WARNING_MESSAGE);
+    }
 
     private void loadCounts() {
-
-        lblFacultyCount.setText(
-                String.valueOf(
-                        getCount("faculty")));
-
-        lblSubjectCount.setText(
-                String.valueOf(
-                        getCount("subjects")));
-
-        lblDepartmentCount.setText(
-                String.valueOf(
-                        getCount("departments")));
-
-        lblRoomCount.setText(
-                String.valueOf(
-                        getCount("rooms")));
+        lblFacultyCount.setText(String.valueOf(getCount("faculty")));
+        lblSubjectCount.setText(String.valueOf(getCount("subjects")));
+        lblDepartmentCount.setText(String.valueOf(getCount("departments")));
+        lblRoomCount.setText(String.valueOf(getCount("rooms")));
     }
 
     private int getCount(String tableName) {
-
-        String sql =
-                "SELECT COUNT(*) FROM "
-                + tableName;
-
-        try (Connection conn =
-                     DatabaseConnection.getConnection();
-             PreparedStatement ps =
-                     conn.prepareStatement(sql);
-             ResultSet rs =
-                     ps.executeQuery()) {
-
+        String sql = "SELECT COUNT(*) FROM " + tableName;
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
             if (rs.next()) {
                 return rs.getInt(1);
             }
-
         } catch (SQLException e) {
-
-            System.out.println(
-                    "Unable to count "
-                    + tableName
-                    + ": "
-                    + e.getMessage());
+            System.err.println("Unable to count " + tableName + ": " + e.getMessage());
         }
-
         return 0;
     }
 
-    // ==============================
-    // FACULTY
-    // ==============================
-
-    private void openFaculty() {
-
-        FacultyFrame frame =
-                new FacultyFrame();
-
-        frame.setVisible(true);
-    }
-
-    // ==============================
-    // LOGOUT
-    // ==============================
-
     private void logout() {
+        int choice = JOptionPane.showConfirmDialog(
+                this,
+                "Are you sure you want to logout?",
+                "Confirm Logout",
+                JOptionPane.YES_NO_OPTION);
 
-        int choice =
-                JOptionPane.showConfirmDialog(
-                        this,
-                        "Are you sure you want to logout?",
-                        "Logout",
-                        JOptionPane.YES_NO_OPTION);
-
-        if (choice ==
-                JOptionPane.YES_OPTION) {
-
+        if (choice == JOptionPane.YES_OPTION) {
             new LoginFrame().setVisible(true);
-
             dispose();
         }
-    }
-
-    public User getCurrentUser() {
-        return currentUser;
     }
 }

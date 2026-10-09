@@ -49,4 +49,17 @@ public class DepartmentDAO {
 
         return departments;
     }
+    
+    public boolean addDepartment(Department department) throws SQLException {
+        String sql = "INSERT INTO departments (department_code, department_name) VALUES (?, ?)";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, department.getDepartmentCode().trim());
+            stmt.setString(2, department.getDepartmentName().trim());
+
+            return stmt.executeUpdate() > 0;
+        }
+    }
 }

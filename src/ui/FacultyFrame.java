@@ -5,761 +5,354 @@ import dao.FacultyDAO;
 import model.Department;
 import model.Faculty;
 
-import java.awt.BorderLayout;
-import java.awt.FlowLayout;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.GridLayout;
-import java.awt.Insets;
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
+import javax.swing.table.DefaultTableModel;
+import java.awt.*;
 import java.sql.SQLException;
 import java.util.List;
-
-import javax.swing.BorderFactory;
-import javax.swing.JButton;
-import javax.swing.JComboBox;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTable;
-import javax.swing.JTextField;
-import javax.swing.ListSelectionModel;
-import javax.swing.table.DefaultTableModel;
 
 public class FacultyFrame extends JFrame {
 
     private final FacultyDAO facultyDAO = new FacultyDAO();
     private final DepartmentDAO departmentDAO = new DepartmentDAO();
 
-    private final JTextField txtEmployeeNo = new JTextField(15);
-    private final JTextField txtFirstName = new JTextField(15);
-    private final JTextField txtLastName = new JTextField(15);
-    private final JTextField txtEmail = new JTextField(15);
-    private final JTextField txtContactNo = new JTextField(15);
-    private final JTextField txtMaxUnits = new JTextField(15);
-    private final JTextField txtSearch = new JTextField(20);
+    private final JTextField txtEmployeeNo = new JTextField(14);
+    private final JTextField txtFirstName = new JTextField(14);
+    private final JTextField txtLastName = new JTextField(14);
+    private final JTextField txtEmail = new JTextField(14);
+    private final JTextField txtContactNo = new JTextField(14);
+    private final JTextField txtMaxUnits = new JTextField(14);
+    private final JTextField txtSearch = new JTextField(18);
 
-    private final JComboBox<Department> cmbDepartment =
-            new JComboBox<>();
-
-    private final JComboBox<String> cmbEmploymentType =
-            new JComboBox<>(
-                    new String[]{"Full-time", "Part-time"});
-
-    private final JComboBox<String> cmbStatus =
-            new JComboBox<>(
-                    new String[]{"Active", "Inactive"});
+    private final JComboBox<Department> cmbDepartment = new JComboBox<>();
+    private final JComboBox<String> cmbEmploymentType = new JComboBox<>(new String[]{"Full-time", "Part-time"});
+    private final JComboBox<String> cmbStatus = new JComboBox<>(new String[]{"Active", "Inactive"});
 
     private final JTable table = new JTable();
-
+    private DefaultTableModel tableModel;
     private int selectedFacultyId = -1;
 
     public FacultyFrame() {
-
         super("Faculty Management");
-
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setSize(1080, 680);
+        setLocationRelativeTo(null);
 
         buildUI();
-
         loadDepartments();
         loadFaculty();
-
-        setSize(1050, 650);
-        setLocationRelativeTo(null);
     }
 
     private void buildUI() {
+        JPanel root = new JPanel(new BorderLayout(0, 10));
+        root.setBackground(new Color(241, 245, 249));
 
-        JPanel root = new JPanel(new BorderLayout(10, 10));
-        root.setBorder(
-                BorderFactory.createEmptyBorder(
-                        10, 10, 10, 10));
+        // HEADER
+        JPanel header = new JPanel(new BorderLayout());
+        header.setBackground(new Color(30, 41, 59));
+        header.setBorder(new EmptyBorder(14, 20, 14, 20));
 
-        root.add(createFormPanel(), BorderLayout.NORTH);
-        root.add(createTablePanel(), BorderLayout.CENTER);
-        root.add(createSearchPanel(), BorderLayout.SOUTH);
+        JLabel title = new JLabel("FACULTY INSTRUCTOR MANAGEMENT");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        title.setForeground(Color.WHITE);
 
-        setContentPane(root);
-    }
+        JLabel sub = new JLabel("Register and maintain academic instructor profiles & max load");
+        sub.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        sub.setForeground(new Color(203, 213, 225));
 
-    // =========================================
-    // FORM
-    // =========================================
+        header.add(title, BorderLayout.NORTH);
+        header.add(sub, BorderLayout.SOUTH);
+        root.add(header, BorderLayout.NORTH);
 
-    private JPanel createFormPanel() {
+        // BODY CONTAINER
+        JPanel body = new JPanel(new BorderLayout(0, 12));
+        body.setOpaque(false);
+        body.setBorder(new EmptyBorder(12, 20, 15, 20));
 
-        JPanel panel = new JPanel(new GridBagLayout());
+        // FORM CARD
+        JPanel formCard = new JPanel(new GridBagLayout());
+        formCard.setBackground(Color.WHITE);
+        formCard.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(new Color(226, 232, 240), 1),
+                new EmptyBorder(12, 16, 12, 16)
+        ));
 
-        panel.setBorder(
-                BorderFactory.createTitledBorder(
-                        "Faculty Information"));
-
-        GridBagConstraints c =
-                new GridBagConstraints();
-
-        c.insets = new Insets(5, 5, 5, 5);
+        GridBagConstraints c = new GridBagConstraints();
+        c.insets = new Insets(4, 6, 4, 6);
         c.fill = GridBagConstraints.HORIZONTAL;
 
-        // Row 1
-        addField(panel, c, 0, 0,
-                "Employee No:", txtEmployeeNo);
+        addFormRow(formCard, c, 0, 0, "Employee No:", txtEmployeeNo, "Department:", cmbDepartment);
+        addFormRow(formCard, c, 0, 1, "First Name:", txtFirstName, "Last Name:", txtLastName);
+        addFormRow(formCard, c, 0, 2, "Email Address:", txtEmail, "Contact No:", txtContactNo);
+        addFormRow(formCard, c, 0, 3, "Employment:", cmbEmploymentType, "Max Units:", txtMaxUnits);
+        addFormRow(formCard, c, 0, 4, "Status:", cmbStatus, "", new JLabel(""));
 
-        addField(panel, c, 2, 0,
-                "Department:", cmbDepartment);
+        // FORM BUTTONS
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
+        btnPanel.setOpaque(false);
 
-        // Row 2
-        addField(panel, c, 0, 1,
-                "First Name:", txtFirstName);
+        JButton btnSave = createBtn("Save", new Color(37, 99, 235));
+        JButton btnUpdate = createBtn("Update", new Color(13, 148, 136));
+        JButton btnDelete = createBtn("Delete", new Color(220, 38, 38));
+        JButton btnClear = createBtn("Clear", new Color(100, 116, 139));
 
-        addField(panel, c, 2, 1,
-                "Last Name:", txtLastName);
+        btnPanel.add(btnSave);
+        btnPanel.add(btnUpdate);
+        btnPanel.add(btnDelete);
+        btnPanel.add(btnClear);
 
-        // Row 3
-        addField(panel, c, 0, 2,
-                "Email:", txtEmail);
+        c.gridx = 0; c.gridy = 5; c.gridwidth = 4;
+        formCard.add(btnPanel, c);
 
-        addField(panel, c, 2, 2,
-                "Contact No:", txtContactNo);
+        body.add(formCard, BorderLayout.NORTH);
 
-        // Row 4
-        addField(panel, c, 0, 3,
-                "Employment:", cmbEmploymentType);
+        // SEARCH & TABLE CARD
+        JPanel tableCard = new JPanel(new BorderLayout(0, 8));
+        tableCard.setBackground(Color.WHITE);
+        tableCard.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(new Color(226, 232, 240), 1),
+                new EmptyBorder(12, 16, 12, 16)
+        ));
 
-        addField(panel, c, 2, 3,
-                "Max Units:", txtMaxUnits);
+        // Search Bar
+        JPanel searchBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        searchBar.setOpaque(false);
+        searchBar.add(new JLabel("Search Keyword:"));
+        searchBar.add(txtSearch);
 
-        // Row 5
-        addField(panel, c, 0, 4,
-                "Status:", cmbStatus);
+        JButton btnSearch = createBtn("Search", new Color(30, 41, 59));
+        JButton btnShowAll = createBtn("Show All", new Color(71, 85, 105));
+        searchBar.add(btnSearch);
+        searchBar.add(btnShowAll);
 
-        JPanel buttons = new JPanel(
-                new FlowLayout(FlowLayout.LEFT));
+        tableCard.add(searchBar, BorderLayout.NORTH);
 
-        JButton btnSave = new JButton("Save");
-        JButton btnUpdate = new JButton("Update");
-        JButton btnDelete = new JButton("Delete");
-        JButton btnClear = new JButton("Clear");
+        // Table
+        table.setRowHeight(26);
+        table.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
+        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
-        buttons.add(btnSave);
-        buttons.add(btnUpdate);
-        buttons.add(btnDelete);
-        buttons.add(btnClear);
+        tableCard.add(new JScrollPane(table), BorderLayout.CENTER);
+        body.add(tableCard, BorderLayout.CENTER);
 
-        c.gridx = 0;
-        c.gridy = 5;
-        c.gridwidth = 4;
+        root.add(body, BorderLayout.CENTER);
+        setContentPane(root);
 
-        panel.add(buttons, c);
-
+        // LISTENERS
         btnSave.addActionListener(e -> saveFaculty());
         btnUpdate.addActionListener(e -> updateFaculty());
         btnDelete.addActionListener(e -> deleteFaculty());
         btnClear.addActionListener(e -> clearForm());
+        btnSearch.addActionListener(e -> searchFaculty());
+        btnShowAll.addActionListener(e -> loadFaculty());
+        txtSearch.addActionListener(e -> searchFaculty());
 
-        return panel;
+        table.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting() && table.getSelectedRow() != -1) {
+                selectFaculty();
+            }
+        });
     }
 
-    private void addField(
-            JPanel panel,
-            GridBagConstraints c,
-            int x,
-            int y,
-            String label,
-            java.awt.Component component) {
-
-        c.gridx = x;
-        c.gridy = y;
-        c.gridwidth = 1;
-
-        panel.add(new JLabel(label), c);
-
-        c.gridx = x + 1;
-
-        panel.add(component, c);
+    private void addFormRow(JPanel p, GridBagConstraints c, int x, int y,
+                            String l1, Component comp1, String l2, Component comp2) {
+        c.gridy = y; c.gridwidth = 1;
+        c.gridx = x; p.add(new JLabel(l1), c);
+        c.gridx = x + 1; p.add(comp1, c);
+        c.gridx = x + 2; p.add(new JLabel(l2), c);
+        c.gridx = x + 3; p.add(comp2, c);
     }
 
-    // =========================================
-    // TABLE
-    // =========================================
-
-    private JPanel createTablePanel() {
-
-        JPanel panel = new JPanel(
-                new BorderLayout());
-
-        panel.setBorder(
-                BorderFactory.createTitledBorder(
-                        "Faculty Records"));
-
-        table.setSelectionMode(
-                ListSelectionModel.SINGLE_SELECTION);
-
-        table.setAutoCreateRowSorter(true);
-
-        table.getSelectionModel()
-                .addListSelectionListener(e -> {
-
-                    if (!e.getValueIsAdjusting()) {
-                        selectFaculty();
-                    }
-                });
-
-        JScrollPane scrollPane =
-                new JScrollPane(table);
-
-        panel.add(scrollPane,
-                BorderLayout.CENTER);
-
-        return panel;
+    private JButton createBtn(String text, Color bg) {
+        JButton btn = new JButton(text);
+        btn.setUI(new javax.swing.plaf.basic.BasicButtonUI());
+        btn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btn.setBackground(bg);
+        btn.setForeground(Color.WHITE);
+        btn.setFocusPainted(false);
+        btn.setPreferredSize(new Dimension(85, 30));
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        return btn;
     }
-
-    // =========================================
-    // SEARCH
-    // =========================================
-
-    private JPanel createSearchPanel() {
-
-        JPanel panel = new JPanel(
-                new FlowLayout(FlowLayout.LEFT));
-
-        panel.add(new JLabel("Search:"));
-        panel.add(txtSearch);
-
-        JButton btnSearch =
-                new JButton("Search");
-
-        JButton btnShowAll =
-                new JButton("Show All");
-
-        panel.add(btnSearch);
-        panel.add(btnShowAll);
-
-        btnSearch.addActionListener(
-                e -> searchFaculty());
-
-        btnShowAll.addActionListener(
-                e -> loadFaculty());
-
-        return panel;
-    }
-
-    // =========================================
-    // LOAD DEPARTMENTS
-    // =========================================
 
     private void loadDepartments() {
-
         try {
-
             cmbDepartment.removeAllItems();
-
-            List<Department> departments =
-                    departmentDAO.getAllDepartments();
-
-            for (Department department :
-                    departments) {
-
-                cmbDepartment.addItem(
-                        department);
-            }
-
-        } catch (SQLException e) {
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Unable to load departments.\n"
-                    + e.getMessage(),
-                    "Database Error",
-                    JOptionPane.ERROR_MESSAGE);
+            List<Department> depts = departmentDAO.getAllDepartments();
+            for (Department d : depts) cmbDepartment.addItem(d);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Error loading departments: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
-
-    // =========================================
-    // LOAD FACULTY
-    // =========================================
 
     private void loadFaculty() {
-
         try {
-
-            List<Faculty> facultyList =
-                    facultyDAO.getAllFaculty();
-
-            displayFaculty(facultyList);
-
+            displayFaculty(facultyDAO.getAllFaculty());
         } catch (SQLException e) {
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Unable to load faculty records.\n"
-                    + e.getMessage(),
-                    "Database Error",
-                    JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Error loading faculty: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
-    // =========================================
-    // DISPLAY TABLE
-    // =========================================
+    private void searchFaculty() {
+        String keyword = txtSearch.getText().trim();
+        if (keyword.isEmpty()) { loadFaculty(); return; }
+        try {
+            displayFaculty(facultyDAO.searchFaculty(keyword));
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Error searching: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
 
-    private void displayFaculty(
-            List<Faculty> facultyList) {
-
-        String[] columns = {
-            "ID",
-            "Employee No.",
-            "First Name",
-            "Last Name",
-            "Department ID",
-            "Email",
-            "Contact No.",
-            "Employment",
-            "Max Units",
-            "Status"
+    private void displayFaculty(List<Faculty> list) {
+        String[] cols = {"ID", "Employee No", "First Name", "Last Name", "Dept ID", "Email", "Contact", "Type", "Max Units", "Status"};
+        tableModel = new DefaultTableModel(cols, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
         };
-
-        DefaultTableModel model =
-                new DefaultTableModel(columns, 0) {
-
-                    @Override
-                    public boolean isCellEditable(
-                            int row,
-                            int column) {
-                        return false;
-                    }
-                };
-
-        for (Faculty faculty :
-                facultyList) {
-
-            model.addRow(new Object[]{
-                faculty.getFacultyId(),
-                faculty.getEmployeeNo(),
-                faculty.getFirstName(),
-                faculty.getLastName(),
-                faculty.getDepartmentId(),
-                faculty.getEmail(),
-                faculty.getContactNo(),
-                faculty.getEmploymentType(),
-                faculty.getMaxUnits(),
-                faculty.getStatus()
+        for (Faculty f : list) {
+            tableModel.addRow(new Object[]{
+                f.getFacultyId(), f.getEmployeeNo(), f.getFirstName(), f.getLastName(),
+                f.getDepartmentId(), f.getEmail(), f.getContactNo(), f.getEmploymentType(),
+                f.getMaxUnits(), f.getStatus()
             });
         }
-
-        table.setModel(model);
+        table.setModel(tableModel);
     }
-
-    // =========================================
-    // SELECT ROW
-    // =========================================
 
     private void selectFaculty() {
-
         int row = table.getSelectedRow();
+        if (row == -1) return;
 
-        if (row == -1) {
-            return;
-        }
+        selectedFacultyId = Integer.parseInt(table.getValueAt(row, 0).toString());
+        txtEmployeeNo.setText(table.getValueAt(row, 1).toString());
+        txtFirstName.setText(table.getValueAt(row, 2).toString());
+        txtLastName.setText(table.getValueAt(row, 3).toString());
 
-        int modelRow =
-                table.convertRowIndexToModel(row);
-
-        selectedFacultyId =
-                Integer.parseInt(
-                        table.getModel()
-                                .getValueAt(
-                                        modelRow, 0)
-                                .toString());
-
-        txtEmployeeNo.setText(
-                table.getModel()
-                        .getValueAt(modelRow, 1)
-                        .toString());
-
-        txtFirstName.setText(
-                table.getModel()
-                        .getValueAt(modelRow, 2)
-                        .toString());
-
-        txtLastName.setText(
-                table.getModel()
-                        .getValueAt(modelRow, 3)
-                        .toString());
-
-        int departmentId =
-                Integer.parseInt(
-                        table.getModel()
-                                .getValueAt(modelRow, 4)
-                                .toString());
-
-        selectDepartment(departmentId);
-
-        Object email =
-                table.getModel()
-                        .getValueAt(modelRow, 5);
-
-        txtEmail.setText(
-                email == null ? "" :
-                        email.toString());
-
-        Object contact =
-                table.getModel()
-                        .getValueAt(modelRow, 6);
-
-        txtContactNo.setText(
-                contact == null ? "" :
-                        contact.toString());
-
-        cmbEmploymentType.setSelectedItem(
-                table.getModel()
-                        .getValueAt(modelRow, 7)
-                        .toString());
-
-        txtMaxUnits.setText(
-                table.getModel()
-                        .getValueAt(modelRow, 8)
-                        .toString());
-
-        cmbStatus.setSelectedItem(
-                table.getModel()
-                        .getValueAt(modelRow, 9)
-                        .toString());
-    }
-
-    private void selectDepartment(
-            int departmentId) {
-
-        for (int i = 0;
-             i < cmbDepartment.getItemCount();
-             i++) {
-
-            Department d =
-                    cmbDepartment.getItemAt(i);
-
-            if (d.getDepartmentId()
-                    == departmentId) {
-
+        int deptId = Integer.parseInt(table.getValueAt(row, 4).toString());
+        for (int i = 0; i < cmbDepartment.getItemCount(); i++) {
+            if (cmbDepartment.getItemAt(i).getDepartmentId() == deptId) {
                 cmbDepartment.setSelectedIndex(i);
                 break;
             }
         }
+
+        Object email = table.getValueAt(row, 5);
+        txtEmail.setText(email == null ? "" : email.toString());
+
+        Object contact = table.getValueAt(row, 6);
+        txtContactNo.setText(contact == null ? "" : contact.toString());
+
+        cmbEmploymentType.setSelectedItem(table.getValueAt(row, 7).toString());
+        txtMaxUnits.setText(table.getValueAt(row, 8).toString());
+        cmbStatus.setSelectedItem(table.getValueAt(row, 9).toString());
     }
 
-    // =========================================
-    // VALIDATION
-    // =========================================
+    private void saveFaculty() {
+        Faculty faculty = getFacultyFromForm();
+        if (faculty == null) return;
+        try {
+            if (facultyDAO.addFaculty(faculty)) {
+                JOptionPane.showMessageDialog(this, "Faculty record saved successfully.");
+                clearForm();
+                loadFaculty();
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Database error:\n" + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void updateFaculty() {
+        if (selectedFacultyId == -1) {
+            JOptionPane.showMessageDialog(this, "Please select a faculty record to update.");
+            return;
+        }
+        Faculty faculty = getFacultyFromForm();
+        if (faculty == null) return;
+        try {
+            if (facultyDAO.updateFaculty(faculty)) {
+                JOptionPane.showMessageDialog(this, "Faculty record updated successfully.");
+                clearForm();
+                loadFaculty();
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Database error:\n" + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void deleteFaculty() {
+        if (selectedFacultyId == -1) {
+            JOptionPane.showMessageDialog(this, "Please select a faculty record to delete.");
+            return;
+        }
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Are you sure you want to delete this faculty member?", "Confirm Delete", JOptionPane.YES_NO_OPTION);
+        if (confirm != JOptionPane.YES_OPTION) return;
+
+        try {
+            if (facultyDAO.deleteFaculty(selectedFacultyId)) {
+                JOptionPane.showMessageDialog(this, "Faculty member deleted.");
+                clearForm();
+                loadFaculty();
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Cannot delete faculty (may be assigned to active schedules):\n" + e.getMessage(),
+                    "Constraint Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
 
     private Faculty getFacultyFromForm() {
+        String emp = txtEmployeeNo.getText().trim();
+        String first = txtFirstName.getText().trim();
+        String last = txtLastName.getText().trim();
+        String maxStr = txtMaxUnits.getText().trim();
 
-        String employeeNo =
-                txtEmployeeNo.getText().trim();
-
-        String firstName =
-                txtFirstName.getText().trim();
-
-        String lastName =
-                txtLastName.getText().trim();
-
-        String email =
-                txtEmail.getText().trim();
-
-        String contactNo =
-                txtContactNo.getText().trim();
-
-        String maxUnitsText =
-                txtMaxUnits.getText().trim();
-
-        if (employeeNo.isEmpty()
-                || firstName.isEmpty()
-                || lastName.isEmpty()
-                || maxUnitsText.isEmpty()) {
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Please fill in all required fields.",
-                    "Validation Error",
-                    JOptionPane.WARNING_MESSAGE);
-
-            return null;
-        }
-
-        if (cmbDepartment.getSelectedItem()
-                == null) {
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Please select a department.",
-                    "Validation Error",
-                    JOptionPane.WARNING_MESSAGE);
-
+        if (emp.isEmpty() || first.isEmpty() || last.isEmpty() || maxStr.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please fill in all required fields (Employee No, Names, Max Units).",
+                    "Validation Error", JOptionPane.WARNING_MESSAGE);
             return null;
         }
 
         int maxUnits;
-
         try {
-
-            maxUnits =
-                    Integer.parseInt(maxUnitsText);
-
+            maxUnits = Integer.parseInt(maxStr);
+            if (maxUnits <= 0) throw new NumberFormatException();
         } catch (NumberFormatException e) {
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Max Units must be a number.",
-                    "Validation Error",
-                    JOptionPane.WARNING_MESSAGE);
-
+            JOptionPane.showMessageDialog(this, "Max Units must be a positive number.", "Validation Error", JOptionPane.WARNING_MESSAGE);
             return null;
         }
 
-        if (maxUnits <= 0) {
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Max Units must be greater than 0.",
-                    "Validation Error",
-                    JOptionPane.WARNING_MESSAGE);
-
+        Department d = (Department) cmbDepartment.getSelectedItem();
+        if (d == null) {
+            JOptionPane.showMessageDialog(this, "Please select a department.", "Validation Error", JOptionPane.WARNING_MESSAGE);
             return null;
         }
 
-        if (!email.isEmpty()
-                && !email.matches(
-                        "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")) {
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Please enter a valid email address.",
-                    "Validation Error",
-                    JOptionPane.WARNING_MESSAGE);
-
-            return null;
-        }
-
-        Department department =
-                (Department) cmbDepartment
-                        .getSelectedItem();
-
-        Faculty faculty =
-                new Faculty();
-
-        faculty.setFacultyId(
-                selectedFacultyId);
-
-        faculty.setEmployeeNo(employeeNo);
-        faculty.setDepartmentId(
-                department.getDepartmentId());
-        faculty.setFirstName(firstName);
-        faculty.setLastName(lastName);
-        faculty.setEmail(
-                email.isEmpty() ? null : email);
-        faculty.setContactNo(
-                contactNo.isEmpty() ? null :
-                        contactNo);
-        faculty.setEmploymentType(
-                cmbEmploymentType
-                        .getSelectedItem()
-                        .toString());
-        faculty.setMaxUnits(maxUnits);
-        faculty.setStatus(
-                cmbStatus
-                        .getSelectedItem()
-                        .toString());
-
-        return faculty;
+        Faculty f = new Faculty();
+        f.setFacultyId(selectedFacultyId);
+        f.setEmployeeNo(emp);
+        f.setDepartmentId(d.getDepartmentId());
+        f.setFirstName(first);
+        f.setLastName(last);
+        f.setEmail(txtEmail.getText().trim());
+        f.setContactNo(txtContactNo.getText().trim());
+        f.setEmploymentType((String) cmbEmploymentType.getSelectedItem());
+        f.setMaxUnits(maxUnits);
+        f.setStatus((String) cmbStatus.getSelectedItem());
+        return f;
     }
-
-    // =========================================
-    // SAVE
-    // =========================================
-
-    private void saveFaculty() {
-
-        Faculty faculty =
-                getFacultyFromForm();
-
-        if (faculty == null) {
-            return;
-        }
-
-        try {
-
-            if (facultyDAO.addFaculty(faculty)) {
-
-                JOptionPane.showMessageDialog(
-                        this,
-                        "Faculty saved successfully.",
-                        "Success",
-                        JOptionPane.INFORMATION_MESSAGE);
-
-                clearForm();
-                loadFaculty();
-            }
-
-        } catch (SQLException e) {
-
-            showDatabaseError(e);
-        }
-    }
-
-    // =========================================
-    // UPDATE
-    // =========================================
-
-    private void updateFaculty() {
-
-        if (selectedFacultyId == -1) {
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Please select a faculty record first.",
-                    "Update",
-                    JOptionPane.WARNING_MESSAGE);
-
-            return;
-        }
-
-        Faculty faculty =
-                getFacultyFromForm();
-
-        if (faculty == null) {
-            return;
-        }
-
-        try {
-
-            if (facultyDAO.updateFaculty(faculty)) {
-
-                JOptionPane.showMessageDialog(
-                        this,
-                        "Faculty updated successfully.",
-                        "Success",
-                        JOptionPane.INFORMATION_MESSAGE);
-
-                clearForm();
-                loadFaculty();
-            }
-
-        } catch (SQLException e) {
-
-            showDatabaseError(e);
-        }
-    }
-
-    // =========================================
-    // DELETE
-    // =========================================
-
-    private void deleteFaculty() {
-
-        if (selectedFacultyId == -1) {
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Please select a faculty record first.",
-                    "Delete",
-                    JOptionPane.WARNING_MESSAGE);
-
-            return;
-        }
-
-        int choice =
-                JOptionPane.showConfirmDialog(
-                        this,
-                        "Are you sure you want to delete this faculty?",
-                        "Confirm Delete",
-                        JOptionPane.YES_NO_OPTION);
-
-        if (choice != JOptionPane.YES_OPTION) {
-            return;
-        }
-
-        try {
-
-            if (facultyDAO.deleteFaculty(
-                    selectedFacultyId)) {
-
-                JOptionPane.showMessageDialog(
-                        this,
-                        "Faculty deleted successfully.",
-                        "Success",
-                        JOptionPane.INFORMATION_MESSAGE);
-
-                clearForm();
-                loadFaculty();
-            }
-
-        } catch (SQLException e) {
-
-            showDatabaseError(e);
-        }
-    }
-
-    // =========================================
-    // SEARCH
-    // =========================================
-
-    private void searchFaculty() {
-
-        String keyword =
-                txtSearch.getText().trim();
-
-        if (keyword.isEmpty()) {
-            loadFaculty();
-            return;
-        }
-
-        try {
-
-            List<Faculty> results =
-                    facultyDAO.searchFaculty(keyword);
-
-            displayFaculty(results);
-
-        } catch (SQLException e) {
-
-            showDatabaseError(e);
-        }
-    }
-
-    // =========================================
-    // CLEAR
-    // =========================================
 
     private void clearForm() {
-
         selectedFacultyId = -1;
-
         txtEmployeeNo.setText("");
         txtFirstName.setText("");
         txtLastName.setText("");
         txtEmail.setText("");
         txtContactNo.setText("");
         txtMaxUnits.setText("");
-
-        if (cmbDepartment.getItemCount() > 0) {
-            cmbDepartment.setSelectedIndex(0);
-        }
-
+        if (cmbDepartment.getItemCount() > 0) cmbDepartment.setSelectedIndex(0);
         cmbEmploymentType.setSelectedIndex(0);
         cmbStatus.setSelectedIndex(0);
-
         table.clearSelection();
-
-        txtEmployeeNo.requestFocus();
-    }
-
-    private void showDatabaseError(
-            SQLException e) {
-
-        JOptionPane.showMessageDialog(
-                this,
-                "Database error:\n"
-                + e.getMessage(),
-                "Database Error",
-                JOptionPane.ERROR_MESSAGE);
     }
 }
