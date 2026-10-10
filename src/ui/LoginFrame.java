@@ -29,11 +29,11 @@ public class LoginFrame extends JFrame {
 
     private void buildUI() {
         JPanel root = new JPanel(new BorderLayout());
-        root.setBackground(new Color(241, 245, 249));
+        root.setBackground(Theme.BACKGROUND);
 
         // Header Banner
         JPanel header = new JPanel(new GridLayout(2, 1, 2, 2));
-        header.setBackground(new Color(30, 41, 59));
+        header.setBackground(Theme.HEADER);
         header.setBorder(new EmptyBorder(18, 25, 18, 25));
 
         JLabel lblTitle = new JLabel("UNIVERSITY FACULTY LOADING SYSTEM", SwingConstants.CENTER);
@@ -42,7 +42,7 @@ public class LoginFrame extends JFrame {
 
         JLabel lblSub = new JLabel("Secure System Access", SwingConstants.CENTER);
         lblSub.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        lblSub.setForeground(new Color(203, 213, 225));
+        lblSub.setForeground(Theme.HEADER_SUB);
 
         header.add(lblTitle);
         header.add(lblSub);
@@ -82,9 +82,9 @@ public class LoginFrame extends JFrame {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0));
         buttonPanel.setOpaque(false);
 
-        styleButton(btnLogin, new Color(37, 99, 235), Color.WHITE);
-        styleButton(btnClear, new Color(100, 116, 139), Color.WHITE);
-        styleButton(btnExit, new Color(220, 38, 38), Color.WHITE);
+        styleButton(btnLogin, Theme.PRIMARY, Color.WHITE);
+        styleButton(btnClear, Theme.SECONDARY, Color.WHITE);
+        styleButton(btnExit, Theme.DANGER, Color.WHITE);
 
         buttonPanel.add(btnLogin);
         buttonPanel.add(btnClear);

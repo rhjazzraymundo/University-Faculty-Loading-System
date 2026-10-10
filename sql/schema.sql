@@ -107,7 +107,12 @@ INSERT INTO departments (department_code, department_name) VALUES
     ('DCS',  'Department of Computer Science'),
     ('DMATH', 'Department of Mathematics'),
     ('DENG', 'Department of English'),
-    ('DPE',  'Department of Physical Education');
+    ('DPE',  'Department of Physical Education'),
+    ('DBA',  'Department of Business Administration'),
+    ('DEDU', 'Department of Education'),
+    ('DSCI', 'Department of Natural Sciences'),
+    ('DSOC', 'Department of Social Sciences'),
+    ('DENGR','Department of Engineering');
 
 INSERT INTO faculty (employee_no, first_name, last_name, department_id, email, contact_no, employment_type, max_units, status) VALUES
     ('EMP-001', 'Maria',  'Santos',    1, 'maria.santos@university.edu',  '09171234501', 'Full-time', 24, 'Active'),
@@ -117,7 +122,12 @@ INSERT INTO faculty (employee_no, first_name, last_name, department_id, email, c
     ('EMP-005', 'Lia',    'Mendoza',   3, 'lia.mendoza@university.edu',   '09171234505', 'Full-time', 24, 'Active'),
     ('EMP-006', 'Carlos', 'Dela Cruz', 4, 'carlos.delacruz@university.edu','09171234506', 'Full-time', 24, 'Active'),
     ('EMP-007', 'Elena',  'Ramos',     5, 'elena.ramos@university.edu',   '09171234507', 'Part-time', 12, 'Active'),
-    ('EMP-008', 'Ramon',  'Aquino',    1, 'ramon.aquino@university.edu',  '09171234508', 'Full-time', 24, 'Inactive');
+    ('EMP-008', 'Ramon',  'Aquino',    1, 'ramon.aquino@university.edu',  '09171234508', 'Full-time', 24, 'Inactive'),
+    ('EMP-009', 'Grace',  'Villanueva',6, 'grace.villanueva@university.edu','09171234509', 'Full-time', 24, 'Active'),
+    ('EMP-010', 'Miguel', 'Torres',    7, 'miguel.torres@university.edu',  '09171234510', 'Full-time', 24, 'Active'),
+    ('EMP-011', 'Sofia',  'Bautista',  8, 'sofia.bautista@university.edu', '09171234511', 'Part-time', 12, 'Active'),
+    ('EMP-012', 'Daniel', 'Navarro',   9, 'daniel.navarro@university.edu', '09171234512', 'Full-time', 24, 'Active'),
+    ('EMP-013', 'Isabel', 'Castillo', 10, 'isabel.castillo@university.edu','09171234513', 'Full-time', 24, 'Active');
 
 INSERT INTO subjects (subject_code, subject_title, units, department_id) VALUES
     ('IT101',   'Introduction to Computing',        3, 1),
@@ -129,7 +139,9 @@ INSERT INTO subjects (subject_code, subject_title, units, department_id) VALUES
     ('MATH101', 'College Algebra',                  3, 3),
     ('ENG101',  'Purposive Communication',          3, 4),
     ('PE101',   'Physical Fitness',                 2, 5),
-    ('IT301',   'Systems Analysis and Design',      3, 1);
+    ('IT301',   'Systems Analysis and Design',      3, 1),
+    ('BA101',   'Principles of Management',         3, 6),
+    ('EDU101',  'The Teaching Profession',          3, 7);
 
 INSERT INTO rooms (room_name, building, capacity, room_type) VALUES
     ('Room 101', 'Main Building',  40, 'Lecture'),
@@ -138,7 +150,10 @@ INSERT INTO rooms (room_name, building, capacity, room_type) VALUES
     ('Room 202', 'Main Building',  45, 'Lecture'),
     ('Lab 1',    'IT Building',    30, 'Laboratory'),
     ('Lab 2',    'IT Building',    30, 'Laboratory'),
-    ('Gym',      'Sports Complex', 60, 'Lecture');
+    ('Gym',      'Sports Complex', 60, 'Lecture'),
+    ('Room 301', 'Main Building',  45, 'Lecture'),
+    ('Room 302', 'Main Building',  45, 'Lecture'),
+    ('Lab 3',    'IT Building',    30, 'Laboratory');
 
 -- Sample schedules (no conflicts). Two are left unassigned (faculty_id NULL).
 INSERT INTO schedules (subject_id, faculty_id, room_id, section, term, day_of_week, start_time, end_time) VALUES

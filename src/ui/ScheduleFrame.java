@@ -56,11 +56,11 @@ public class ScheduleFrame extends JFrame {
 
     private void buildUI() {
         JPanel root = new JPanel(new BorderLayout(0, 10));
-        root.setBackground(new Color(241, 245, 249));
+        root.setBackground(Theme.BACKGROUND);
 
         // HEADER
         JPanel header = new JPanel(new BorderLayout());
-        header.setBackground(new Color(30, 41, 59));
+        header.setBackground(Theme.HEADER);
         header.setBorder(new EmptyBorder(14, 20, 14, 20));
 
         JLabel title = new JLabel("FACULTY LOADING & SCHEDULE MANAGEMENT");
@@ -69,7 +69,7 @@ public class ScheduleFrame extends JFrame {
 
         JLabel sub = new JLabel("Timetable allocation with real-time conflict detection and max-unit monitoring");
         sub.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        sub.setForeground(new Color(203, 213, 225));
+        sub.setForeground(Theme.HEADER_SUB);
 
         header.add(title, BorderLayout.NORTH);
         header.add(sub, BorderLayout.SOUTH);
@@ -84,7 +84,7 @@ public class ScheduleFrame extends JFrame {
         JPanel formCard = new JPanel(new GridLayout(5, 4, 10, 8));
         formCard.setBackground(Color.WHITE);
         formCard.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(new Color(226, 232, 240), 1),
+                new LineBorder(Theme.BORDER, 1),
                 new EmptyBorder(12, 16, 12, 16)
         ));
 
@@ -116,10 +116,10 @@ public class ScheduleFrame extends JFrame {
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
         btnPanel.setOpaque(false);
 
-        JButton btnSave = createBtn("Save", new Color(37, 99, 235));
-        JButton btnUpdate = createBtn("Update", new Color(13, 148, 136));
-        JButton btnDelete = createBtn("Delete", new Color(220, 38, 38));
-        JButton btnClear = createBtn("Clear", new Color(100, 116, 139));
+        JButton btnSave = createBtn("Save", Theme.PRIMARY);
+        JButton btnUpdate = createBtn("Update", Theme.ACCENT);
+        JButton btnDelete = createBtn("Delete", Theme.DANGER);
+        JButton btnClear = createBtn("Clear", Theme.SECONDARY);
 
         btnPanel.add(btnSave);
         btnPanel.add(btnUpdate);
@@ -136,7 +136,7 @@ public class ScheduleFrame extends JFrame {
         JPanel tableCard = new JPanel(new BorderLayout(0, 8));
         tableCard.setBackground(Color.WHITE);
         tableCard.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(new Color(226, 232, 240), 1),
+                new LineBorder(Theme.BORDER, 1),
                 new EmptyBorder(12, 16, 12, 16)
         ));
 
@@ -146,8 +146,8 @@ public class ScheduleFrame extends JFrame {
         txtSearch = new JTextField(18);
         searchBar.add(txtSearch);
 
-        JButton btnSearch = createBtn("Search", new Color(30, 41, 59));
-        JButton btnShowAll = createBtn("Show All", new Color(71, 85, 105));
+        JButton btnSearch = createBtn("Search", Theme.PRIMARY);
+        JButton btnShowAll = createBtn("Show All", Theme.SECONDARY);
         searchBar.add(btnSearch);
         searchBar.add(btnShowAll);
         tableCard.add(searchBar, BorderLayout.NORTH);
@@ -160,7 +160,7 @@ public class ScheduleFrame extends JFrame {
 
         table = new JTable(tableModel);
         table.setRowHeight(26);
-        table.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
+        Theme.styleTable(table);
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
         tableCard.add(new JScrollPane(table), BorderLayout.CENTER);
@@ -216,7 +216,7 @@ public class ScheduleFrame extends JFrame {
         int idx = cmbFaculty.getSelectedIndex();
         if (idx < 0 || idx >= facultyIds.size()) {
             lblFacultyLoad.setText("No faculty selected");
-            lblFacultyLoad.setForeground(Color.GRAY);
+            lblFacultyLoad.setForeground(Theme.MUTED);
             return;
         }
 
@@ -227,12 +227,12 @@ public class ScheduleFrame extends JFrame {
         int max = scheduleDAO.getFacultyMaxUnits(fId);
 
         lblFacultyLoad.setText(String.format("Units: %d / %d  |  Hours: %.1f hrs/week", units, max, hrs));
-        if (units >= max) {
-            lblFacultyLoad.setForeground(new Color(220, 38, 38));
+        if (units > max) {
+            lblFacultyLoad.setForeground(Theme.STATUS_OVER);
         } else if (units >= max - 3) {
-            lblFacultyLoad.setForeground(new Color(217, 119, 6));
+            lblFacultyLoad.setForeground(Theme.STATUS_WARN);
         } else {
-            lblFacultyLoad.setForeground(new Color(22, 101, 52));
+            lblFacultyLoad.setForeground(Theme.STATUS_OK);
         }
     }
 
@@ -389,7 +389,7 @@ public class ScheduleFrame extends JFrame {
                    + "INNER JOIN subjects sub ON s.subject_id = sub.subject_id "
                    + "LEFT JOIN faculty f ON s.faculty_id = f.faculty_id "
                    + "INNER JOIN rooms r ON s.room_id = r.room_id "
-                   + "ORDER BY s.day_of_week, s.start_time";
+                   + "ORDER BY CASE s.day_of_week WHEN 'Monday' THEN 1 WHEN 'Tuesday' THEN 2 WHEN 'Wednesday' THEN 3 WHEN 'Thursday' THEN 4 WHEN 'Friday' THEN 5 WHEN 'Saturday' THEN 6 ELSE 7 END, s.start_time";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
@@ -416,7 +416,7 @@ public class ScheduleFrame extends JFrame {
                    + "LEFT JOIN faculty f ON s.faculty_id = f.faculty_id "
                    + "INNER JOIN rooms r ON s.room_id = r.room_id "
                    + "WHERE LOWER(sub.subject_code) LIKE ? OR LOWER(s.section) LIKE ? OR LOWER(r.room_name) LIKE ? "
-                   + "ORDER BY s.day_of_week, s.start_time";
+                   + "ORDER BY CASE s.day_of_week WHEN 'Monday' THEN 1 WHEN 'Tuesday' THEN 2 WHEN 'Wednesday' THEN 3 WHEN 'Thursday' THEN 4 WHEN 'Friday' THEN 5 WHEN 'Saturday' THEN 6 ELSE 7 END, s.start_time";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {

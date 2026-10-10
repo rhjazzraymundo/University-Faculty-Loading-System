@@ -30,11 +30,11 @@ public class DepartmentDialog extends JDialog {
 
     private void buildUI() {
         JPanel root = new JPanel(new BorderLayout(0, 10));
-        root.setBackground(new Color(241, 245, 249));
+        root.setBackground(Theme.BACKGROUND);
 
         // HEADER
         JPanel header = new JPanel(new BorderLayout());
-        header.setBackground(new Color(30, 41, 59));
+        header.setBackground(Theme.HEADER);
         header.setBorder(new EmptyBorder(12, 18, 12, 18));
 
         JLabel title = new JLabel("ACADEMIC DEPARTMENT REGISTRY");
@@ -52,7 +52,7 @@ public class DepartmentDialog extends JDialog {
         JPanel form = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 8));
         form.setBackground(Color.WHITE);
         form.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(new Color(226, 232, 240), 1),
+                new LineBorder(Theme.BORDER, 1),
                 new EmptyBorder(8, 12, 8, 12)
         ));
 
@@ -61,7 +61,7 @@ public class DepartmentDialog extends JDialog {
         form.add(new JLabel("Dept Name:"));
         form.add(txtName);
 
-        JButton btnAdd = createBtn("Add Department", new Color(37, 99, 235), 140);
+        JButton btnAdd = createBtn("Add Department", Theme.PRIMARY, 140);
         form.add(btnAdd);
         body.add(form, BorderLayout.NORTH);
 
@@ -71,14 +71,14 @@ public class DepartmentDialog extends JDialog {
         };
         table.setModel(tableModel);
         table.setRowHeight(26);
-        table.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
+        Theme.styleTable(table);
 
         body.add(new JScrollPane(table), BorderLayout.CENTER);
 
         // BOTTOM
         JPanel bottom = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         bottom.setOpaque(false);
-        JButton btnClose = createBtn("Close", new Color(100, 116, 139), 85);
+        JButton btnClose = createBtn("Close", Theme.SECONDARY, 85);
         bottom.add(btnClose);
         body.add(bottom, BorderLayout.SOUTH);
 

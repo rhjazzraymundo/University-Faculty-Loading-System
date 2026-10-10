@@ -35,13 +35,13 @@ public class DashboardFrame extends JFrame {
 
     private void buildUI() {
         JPanel root = new JPanel(new BorderLayout(0, 0));
-        root.setBackground(new Color(241, 245, 249)); // Clean light slate background
+        root.setBackground(Theme.BACKGROUND); // Clean light slate background
 
         // =====================================================================
         // 1. TOP HEADER BANNER (Title, User Details, Logout)
         // =====================================================================
         JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.setBackground(new Color(30, 41, 59)); // Professional Navy Slate
+        headerPanel.setBackground(Theme.HEADER); // Professional Navy Slate
         headerPanel.setBorder(new EmptyBorder(16, 24, 16, 24));
 
         JPanel headerTextPanel = new JPanel(new GridLayout(2, 1, 3, 3));
@@ -54,7 +54,7 @@ public class DashboardFrame extends JFrame {
         String roleTag = currentUser.isAdmin() ? "Administrator (Full Access)" : "Staff (Scheduling & Reports)";
         JLabel lblUser = new JLabel("Welcome, " + currentUser.getFullName() + "  |  Role: " + roleTag);
         lblUser.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        lblUser.setForeground(new Color(203, 213, 225));
+        lblUser.setForeground(Theme.HEADER_SUB);
 
         headerTextPanel.add(lblTitle);
         headerTextPanel.add(lblUser);
@@ -62,7 +62,7 @@ public class DashboardFrame extends JFrame {
         JButton btnLogout = new JButton("Logout");
         btnLogout.setUI(new javax.swing.plaf.basic.BasicButtonUI());
         btnLogout.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        btnLogout.setBackground(new Color(220, 38, 38)); // Crimson red
+        btnLogout.setBackground(Theme.ACCENT); // Crimson red
         btnLogout.setForeground(Color.WHITE);
         btnLogout.setFocusPainted(false);
         btnLogout.setPreferredSize(new Dimension(85, 30));
@@ -86,10 +86,10 @@ public class DashboardFrame extends JFrame {
         cardsRow.setOpaque(false);
         cardsRow.setPreferredSize(new Dimension(900, 110)); // Prevents stretching!
 
-        cardsRow.add(createStatCard("FACULTY", lblFacultyCount, "Active Instructors", new Color(37, 99, 235)));
-        cardsRow.add(createStatCard("SUBJECTS", lblSubjectCount, "Curriculum Courses", new Color(13, 148, 136)));
-        cardsRow.add(createStatCard("DEPARTMENTS", lblDepartmentCount, "Academic Units", new Color(217, 119, 6)));
-        cardsRow.add(createStatCard("ROOMS", lblRoomCount, "Lecture & Lab Rooms", new Color(124, 58, 237)));
+        cardsRow.add(createStatCard("FACULTY", lblFacultyCount, "Active Instructors", Theme.CARD_1));
+        cardsRow.add(createStatCard("SUBJECTS", lblSubjectCount, "Curriculum Courses", Theme.CARD_2));
+        cardsRow.add(createStatCard("DEPARTMENTS", lblDepartmentCount, "Academic Units", Theme.CARD_3));
+        cardsRow.add(createStatCard("ROOMS", lblRoomCount, "Lecture & Lab Rooms", Theme.CARD_4));
 
         centerPanel.add(cardsRow, BorderLayout.NORTH);
 
@@ -99,7 +99,7 @@ public class DashboardFrame extends JFrame {
 
         JLabel lblSection = new JLabel("SYSTEM MODULES & MANAGEMENT");
         lblSection.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        lblSection.setForeground(new Color(51, 65, 85));
+        lblSection.setForeground(Theme.TEXT);
         moduleSection.add(lblSection, BorderLayout.NORTH);
 
         JPanel moduleGrid = new JPanel(new GridLayout(2, 3, 14, 14));
@@ -132,18 +132,18 @@ public class DashboardFrame extends JFrame {
         JPanel footer = new JPanel(new BorderLayout());
         footer.setBackground(Color.WHITE);
         footer.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(new Color(226, 232, 240), 1),
+                new LineBorder(Theme.BORDER, 1),
                 new EmptyBorder(8, 24, 8, 24)
         ));
 
         JLabel lblFooter = new JLabel("Database: Apache Derby (Port 1527)  |  Faculty Loading System v1.0");
         lblFooter.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        lblFooter.setForeground(new Color(100, 116, 139));
+        lblFooter.setForeground(Theme.MUTED);
 
         JButton btnRefresh = new JButton("Refresh Data");
         btnRefresh.setUI(new javax.swing.plaf.basic.BasicButtonUI());
         btnRefresh.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        btnRefresh.setBackground(new Color(30, 41, 59));
+        btnRefresh.setBackground(Theme.PRIMARY);
         btnRefresh.setForeground(Color.WHITE);
         btnRefresh.setPreferredSize(new Dimension(110, 26));
         btnRefresh.addActionListener(e -> loadCounts());
@@ -203,7 +203,7 @@ public class DashboardFrame extends JFrame {
         JPanel card = new JPanel(new BorderLayout(4, 4));
         card.setBackground(Color.WHITE);
         card.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(new Color(226, 232, 240), 1),
+                new LineBorder(Theme.BORDER, 1),
                 new EmptyBorder(10, 14, 10, 14)
         ));
 
@@ -212,11 +212,11 @@ public class DashboardFrame extends JFrame {
         lblTitle.setForeground(themeColor);
 
         countLabel.setFont(new Font("Segoe UI", Font.BOLD, 32));
-        countLabel.setForeground(new Color(30, 41, 59));
+        countLabel.setForeground(Theme.TEXT);
 
         JLabel lblSub = new JLabel(subtitle, SwingConstants.CENTER);
         lblSub.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        lblSub.setForeground(new Color(148, 163, 184));
+        lblSub.setForeground(Theme.MUTED);
 
         card.add(lblTitle, BorderLayout.NORTH);
         card.add(countLabel, BorderLayout.CENTER);
@@ -233,7 +233,7 @@ public class DashboardFrame extends JFrame {
         btn.setLayout(new GridLayout(2, 1, 2, 2));
         btn.setBackground(Color.WHITE);
         btn.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(new Color(226, 232, 240), 1),
+                new LineBorder(Theme.BORDER, 1),
                 new EmptyBorder(12, 16, 12, 16)
         ));
         btn.setFocusPainted(false);
@@ -241,11 +241,11 @@ public class DashboardFrame extends JFrame {
 
         JLabel lblMain = new JLabel(title);
         lblMain.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        lblMain.setForeground(enabled ? new Color(30, 41, 59) : new Color(148, 163, 184));
+        lblMain.setForeground(enabled ? Theme.TEXT : Theme.DISABLED);
 
         JLabel lblSub = new JLabel(subtitle);
         lblSub.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        lblSub.setForeground(new Color(100, 116, 139));
+        lblSub.setForeground(Theme.MUTED);
 
         btn.add(lblMain);
         btn.add(lblSub);

@@ -9,6 +9,17 @@ import java.util.List;
 
 public class ScheduleDAO {
 
+    /** Sorts days Monday to Saturday instead of alphabetically. */
+    private static final String DAY_ORDER =
+            "CASE day_of_week WHEN 'Monday' THEN 1 WHEN 'Tuesday' THEN 2 WHEN 'Wednesday' THEN 3 "
+          + "WHEN 'Thursday' THEN 4 WHEN 'Friday' THEN 5 WHEN 'Saturday' THEN 6 ELSE 7 END";
+
+    /** An unassigned faculty (id 0 or less) is stored as NULL so the foreign key stays valid. */
+    private static void setFaculty(PreparedStatement pst, int index, int facultyId) throws SQLException {
+        if (facultyId <= 0) pst.setNull(index, Types.INTEGER);
+        else pst.setInt(index, facultyId);
+    }
+
     // ADD
     public boolean addSchedule(Schedule schedule) {
 
@@ -21,7 +32,7 @@ public class ScheduleDAO {
              PreparedStatement pst = conn.prepareStatement(sql)) {
 
             pst.setInt(1, schedule.getSubjectId());
-            pst.setInt(2, schedule.getFacultyId());
+            setFaculty(pst, 2, schedule.getFacultyId());
             pst.setInt(3, schedule.getRoomId());
             pst.setString(4, schedule.getSection());
             pst.setString(5, schedule.getTerm());
@@ -45,7 +56,8 @@ public class ScheduleDAO {
         String sql = "SELECT schedule_id, subject_id, faculty_id, "
                 + "room_id, section, term, day_of_week, start_time, end_time "
                 + "FROM schedules "
-                + "ORDER BY day_of_week, start_time";
+                + "ORDER BY "
+                + DAY_ORDER + ", start_time";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pst = conn.prepareStatement(sql);
@@ -93,7 +105,7 @@ public class ScheduleDAO {
              PreparedStatement pst = conn.prepareStatement(sql)) {
 
             pst.setInt(1, schedule.getSubjectId());
-            pst.setInt(2, schedule.getFacultyId());
+            setFaculty(pst, 2, schedule.getFacultyId());
             pst.setInt(3, schedule.getRoomId());
             pst.setString(4, schedule.getSection());
             pst.setString(5, schedule.getTerm());
@@ -140,7 +152,8 @@ public class ScheduleDAO {
                 + "WHERE LOWER(s.section) LIKE ? "
                 + "OR LOWER(s.term) LIKE ? "
                 + "OR LOWER(s.day_of_week) LIKE ? "
-                + "ORDER BY s.day_of_week, s.start_time";
+                + "ORDER BY "
+                + DAY_ORDER + ", s.start_time";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pst = conn.prepareStatement(sql)) {

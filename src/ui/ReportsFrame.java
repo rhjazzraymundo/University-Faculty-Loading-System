@@ -47,13 +47,13 @@ public class ReportsFrame extends JFrame {
 
     private void buildUI() {
         JPanel root = new JPanel(new BorderLayout(0, 0));
-        root.setBackground(new Color(241, 245, 249)); // Unified slate background
+        root.setBackground(Theme.BACKGROUND); // Unified slate background
 
         // =====================================================================
         // 1. UNIFIED HEADER BANNER (Identical to Faculty, Subject, Schedule)
         // =====================================================================
         JPanel header = new JPanel(new BorderLayout());
-        header.setBackground(new Color(30, 41, 59)); // University Navy
+        header.setBackground(Theme.HEADER); // University Navy
         header.setBorder(new EmptyBorder(14, 20, 14, 20));
 
         JLabel title = new JLabel("SYSTEM REPORTS & LOAD ANALYTICS");
@@ -62,7 +62,7 @@ public class ReportsFrame extends JFrame {
 
         JLabel sub = new JLabel("Official faculty teaching load summaries, instructor timetables, and room utilization records");
         sub.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        sub.setForeground(new Color(203, 213, 225));
+        sub.setForeground(Theme.HEADER_SUB);
 
         header.add(title, BorderLayout.NORTH);
         header.add(sub, BorderLayout.SOUTH);
@@ -93,14 +93,14 @@ public class ReportsFrame extends JFrame {
     // =========================================================================
     private JPanel createSummaryPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 10));
-        panel.setBackground(new Color(241, 245, 249));
+        panel.setBackground(Theme.BACKGROUND);
         panel.setBorder(new EmptyBorder(12, 12, 12, 12));
 
         // FILTER CARD
         JPanel filterCard = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 8));
         filterCard.setBackground(Color.WHITE);
         filterCard.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(new Color(226, 232, 240), 1),
+                new LineBorder(Theme.BORDER, 1),
                 new EmptyBorder(6, 12, 6, 12)
         ));
 
@@ -110,7 +110,7 @@ public class ReportsFrame extends JFrame {
         });
         filterCard.add(cmbSummaryTerm);
 
-        JButton btnRefreshSummary = createBtn("Generate Report", new Color(37, 99, 235), 140);
+        JButton btnRefreshSummary = createBtn("Generate Report", Theme.PRIMARY, 140);
         filterCard.add(btnRefreshSummary);
 
         panel.add(filterCard, BorderLayout.NORTH);
@@ -119,7 +119,7 @@ public class ReportsFrame extends JFrame {
         JPanel tableCard = new JPanel(new BorderLayout());
         tableCard.setBackground(Color.WHITE);
         tableCard.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(new Color(226, 232, 240), 1),
+                new LineBorder(Theme.BORDER, 1),
                 new EmptyBorder(10, 12, 10, 12)
         ));
 
@@ -135,7 +135,7 @@ public class ReportsFrame extends JFrame {
 
         tblFacultySummary = new JTable(modelSummary);
         tblFacultySummary.setRowHeight(26);
-        tblFacultySummary.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
+        Theme.styleTable(tblFacultySummary);
 
         tableCard.add(new JScrollPane(tblFacultySummary), BorderLayout.CENTER);
         panel.add(tableCard, BorderLayout.CENTER);
@@ -226,14 +226,14 @@ public class ReportsFrame extends JFrame {
     // =========================================================================
     private JPanel createFacultySchedulePanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 10));
-        panel.setBackground(new Color(241, 245, 249));
+        panel.setBackground(Theme.BACKGROUND);
         panel.setBorder(new EmptyBorder(12, 12, 12, 12));
 
         // FILTER CARD
         JPanel filterCard = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 8));
         filterCard.setBackground(Color.WHITE);
         filterCard.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(new Color(226, 232, 240), 1),
+                new LineBorder(Theme.BORDER, 1),
                 new EmptyBorder(6, 12, 6, 12)
         ));
 
@@ -247,7 +247,7 @@ public class ReportsFrame extends JFrame {
         });
         filterCard.add(cmbFacultyTerm);
 
-        JButton btnFilter = createBtn("View Timetable", new Color(37, 99, 235), 135);
+        JButton btnFilter = createBtn("View Timetable", Theme.PRIMARY, 135);
         filterCard.add(btnFilter);
 
         panel.add(filterCard, BorderLayout.NORTH);
@@ -256,7 +256,7 @@ public class ReportsFrame extends JFrame {
         JPanel tableCard = new JPanel(new BorderLayout());
         tableCard.setBackground(Color.WHITE);
         tableCard.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(new Color(226, 232, 240), 1),
+                new LineBorder(Theme.BORDER, 1),
                 new EmptyBorder(10, 12, 10, 12)
         ));
 
@@ -271,7 +271,7 @@ public class ReportsFrame extends JFrame {
 
         tblFacultySchedule = new JTable(modelFacultySchedule);
         tblFacultySchedule.setRowHeight(26);
-        tblFacultySchedule.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
+        Theme.styleTable(tblFacultySchedule);
 
         tableCard.add(new JScrollPane(tblFacultySchedule), BorderLayout.CENTER);
         panel.add(tableCard, BorderLayout.CENTER);
@@ -298,7 +298,7 @@ public class ReportsFrame extends JFrame {
                    + "INNER JOIN subjects sub ON s.subject_id = sub.subject_id "
                    + "INNER JOIN rooms r ON s.room_id = r.room_id "
                    + "WHERE s.faculty_id = ? AND s.term = ? "
-                   + "ORDER BY s.day_of_week, s.start_time";
+                   + "ORDER BY CASE s.day_of_week WHEN 'Monday' THEN 1 WHEN 'Tuesday' THEN 2 WHEN 'Wednesday' THEN 3 WHEN 'Thursday' THEN 4 WHEN 'Friday' THEN 5 WHEN 'Saturday' THEN 6 ELSE 7 END, s.start_time";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -330,14 +330,14 @@ public class ReportsFrame extends JFrame {
     // =========================================================================
     private JPanel createRoomUtilizationPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 10));
-        panel.setBackground(new Color(241, 245, 249));
+        panel.setBackground(Theme.BACKGROUND);
         panel.setBorder(new EmptyBorder(12, 12, 12, 12));
 
         // FILTER CARD
         JPanel filterCard = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 8));
         filterCard.setBackground(Color.WHITE);
         filterCard.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(new Color(226, 232, 240), 1),
+                new LineBorder(Theme.BORDER, 1),
                 new EmptyBorder(6, 12, 6, 12)
         ));
 
@@ -351,7 +351,7 @@ public class ReportsFrame extends JFrame {
         });
         filterCard.add(cmbRoomTerm);
 
-        JButton btnFilter = createBtn("View Utilization", new Color(37, 99, 235), 140);
+        JButton btnFilter = createBtn("View Utilization", Theme.PRIMARY, 140);
         filterCard.add(btnFilter);
 
         panel.add(filterCard, BorderLayout.NORTH);
@@ -360,7 +360,7 @@ public class ReportsFrame extends JFrame {
         JPanel tableCard = new JPanel(new BorderLayout());
         tableCard.setBackground(Color.WHITE);
         tableCard.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(new Color(226, 232, 240), 1),
+                new LineBorder(Theme.BORDER, 1),
                 new EmptyBorder(10, 12, 10, 12)
         ));
 
@@ -375,7 +375,7 @@ public class ReportsFrame extends JFrame {
 
         tblRoomSchedule = new JTable(modelRoomSchedule);
         tblRoomSchedule.setRowHeight(26);
-        tblRoomSchedule.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
+        Theme.styleTable(tblRoomSchedule);
 
         tableCard.add(new JScrollPane(tblRoomSchedule), BorderLayout.CENTER);
         panel.add(tableCard, BorderLayout.CENTER);
@@ -402,7 +402,7 @@ public class ReportsFrame extends JFrame {
                    + "INNER JOIN subjects sub ON s.subject_id = sub.subject_id "
                    + "LEFT JOIN faculty f ON s.faculty_id = f.faculty_id "
                    + "WHERE s.room_id = ? AND s.term = ? "
-                   + "ORDER BY s.day_of_week, s.start_time";
+                   + "ORDER BY CASE s.day_of_week WHEN 'Monday' THEN 1 WHEN 'Tuesday' THEN 2 WHEN 'Wednesday' THEN 3 WHEN 'Thursday' THEN 4 WHEN 'Friday' THEN 5 WHEN 'Saturday' THEN 6 ELSE 7 END, s.start_time";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {

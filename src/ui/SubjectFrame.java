@@ -40,11 +40,11 @@ public class SubjectFrame extends JFrame {
 
     private void buildUI() {
         JPanel root = new JPanel(new BorderLayout(0, 10));
-        root.setBackground(new Color(241, 245, 249));
+        root.setBackground(Theme.BACKGROUND);
 
         // HEADER
         JPanel header = new JPanel(new BorderLayout());
-        header.setBackground(new Color(30, 41, 59));
+        header.setBackground(Theme.HEADER);
         header.setBorder(new EmptyBorder(14, 20, 14, 20));
 
         JLabel title = new JLabel("SUBJECT & CURRICULUM MANAGEMENT");
@@ -53,7 +53,7 @@ public class SubjectFrame extends JFrame {
 
         JLabel sub = new JLabel("Manage course offerings, titles, academic departments and unit weights");
         sub.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        sub.setForeground(new Color(203, 213, 225));
+        sub.setForeground(Theme.HEADER_SUB);
 
         header.add(title, BorderLayout.NORTH);
         header.add(sub, BorderLayout.SOUTH);
@@ -68,7 +68,7 @@ public class SubjectFrame extends JFrame {
         JPanel formCard = new JPanel(new GridBagLayout());
         formCard.setBackground(Color.WHITE);
         formCard.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(new Color(226, 232, 240), 1),
+                new LineBorder(Theme.BORDER, 1),
                 new EmptyBorder(12, 16, 12, 16)
         ));
 
@@ -90,10 +90,10 @@ public class SubjectFrame extends JFrame {
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
         btnPanel.setOpaque(false);
 
-        JButton btnSave = createBtn("Save", new Color(37, 99, 235));
-        JButton btnUpdate = createBtn("Update", new Color(13, 148, 136));
-        JButton btnDelete = createBtn("Delete", new Color(220, 38, 38));
-        JButton btnClear = createBtn("Clear", new Color(100, 116, 139));
+        JButton btnSave = createBtn("Save", Theme.PRIMARY);
+        JButton btnUpdate = createBtn("Update", Theme.ACCENT);
+        JButton btnDelete = createBtn("Delete", Theme.DANGER);
+        JButton btnClear = createBtn("Clear", Theme.SECONDARY);
 
         btnPanel.add(btnSave);
         btnPanel.add(btnUpdate);
@@ -109,7 +109,7 @@ public class SubjectFrame extends JFrame {
         JPanel tableCard = new JPanel(new BorderLayout(0, 8));
         tableCard.setBackground(Color.WHITE);
         tableCard.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(new Color(226, 232, 240), 1),
+                new LineBorder(Theme.BORDER, 1),
                 new EmptyBorder(12, 16, 12, 16)
         ));
 
@@ -118,15 +118,15 @@ public class SubjectFrame extends JFrame {
         searchBar.add(new JLabel("Search Subject:"));
         searchBar.add(txtSearch);
 
-        JButton btnSearch = createBtn("Search", new Color(30, 41, 59));
-        JButton btnShowAll = createBtn("Show All", new Color(71, 85, 105));
+        JButton btnSearch = createBtn("Search", Theme.PRIMARY);
+        JButton btnShowAll = createBtn("Show All", Theme.SECONDARY);
         searchBar.add(btnSearch);
         searchBar.add(btnShowAll);
 
         tableCard.add(searchBar, BorderLayout.NORTH);
 
         tblSubjects.setRowHeight(26);
-        tblSubjects.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
+        Theme.styleTable(tblSubjects);
         tblSubjects.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
         tableCard.add(new JScrollPane(tblSubjects), BorderLayout.CENTER);

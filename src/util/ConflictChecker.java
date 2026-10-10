@@ -54,6 +54,7 @@ public class ConflictChecker {
                    + "  AND s.section = ? "
                    + "  AND TRIM(s.term) = TRIM(?) "
                    + "  AND TRIM(s.day_of_week) = TRIM(?) "
+                   + "  AND s.start_time = ? AND s.end_time = ? "
                    + "  AND s.schedule_id <> ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
@@ -63,21 +64,23 @@ public class ConflictChecker {
             ps.setString(2, schedule.getSection().trim());
             ps.setString(3, schedule.getTerm().trim());
             ps.setString(4, schedule.getDayOfWeek().trim());
-            ps.setInt(5, excludeId);
+            ps.setTime(5, schedule.getStartTime());
+            ps.setTime(6, schedule.getEndTime());
+            ps.setInt(7, excludeId);
 
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     JOptionPane.showMessageDialog(parent,
                             "Duplicate Schedule Error!\n\n"
                             + "This section is already scheduled for this subject on "
-                            + schedule.getDayOfWeek() + " for " + schedule.getTerm() + ".",
+                            + schedule.getDayOfWeek() + " at the same time for " + schedule.getTerm() + ".",
                             "Duplicate Entry",
                             JOptionPane.ERROR_MESSAGE);
                     return true;
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Error checking duplicate: " + e.getMessage());
+            return dbError(parent, "duplicate", e);
         }
         return false;
     }
@@ -138,7 +141,7 @@ public class ConflictChecker {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Error checking faculty conflict: " + e.getMessage());
+            return dbError(parent, "faculty conflict", e);
         }
         return false;
     }
@@ -190,7 +193,7 @@ public class ConflictChecker {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Error checking room conflict: " + e.getMessage());
+            return dbError(parent, "room conflict", e);
         }
         return false;
     }
@@ -242,8 +245,18 @@ public class ConflictChecker {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Error checking section conflict: " + e.getMessage());
+            return dbError(parent, "section conflict", e);
         }
         return false;
+    }
+
+    /** If a check cannot run, block the save so a conflict is never missed silently. */
+    private static boolean dbError(Component parent, String what, SQLException e) {
+        System.err.println("Error checking " + what + ": " + e.getMessage());
+        JOptionPane.showMessageDialog(parent,
+                "Could not verify " + what + " because of a database error.\n"
+                + "The schedule was NOT saved.\n\n" + e.getMessage(),
+                "Database Error", JOptionPane.ERROR_MESSAGE);
+        return true;
     }
 }
