@@ -140,16 +140,7 @@ public class DashboardFrame extends JFrame {
         lblFooter.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         lblFooter.setForeground(Theme.MUTED);
 
-        JButton btnRefresh = new JButton("Refresh Data");
-        btnRefresh.setUI(new javax.swing.plaf.basic.BasicButtonUI());
-        btnRefresh.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        btnRefresh.setBackground(Theme.PRIMARY);
-        btnRefresh.setForeground(Color.WHITE);
-        btnRefresh.setPreferredSize(new Dimension(110, 26));
-        btnRefresh.addActionListener(e -> loadCounts());
-
         footer.add(lblFooter, BorderLayout.WEST);
-        footer.add(btnRefresh, BorderLayout.EAST);
 
         root.add(footer, BorderLayout.SOUTH);
 
@@ -261,14 +252,13 @@ public class DashboardFrame extends JFrame {
     }
 
     private void loadCounts() {
-        lblFacultyCount.setText(String.valueOf(getCount("faculty")));
-        lblSubjectCount.setText(String.valueOf(getCount("subjects")));
-        lblDepartmentCount.setText(String.valueOf(getCount("departments")));
-        lblRoomCount.setText(String.valueOf(getCount("rooms")));
+        lblFacultyCount.setText(String.valueOf(getCount("SELECT COUNT(*) FROM faculty")));
+        lblSubjectCount.setText(String.valueOf(getCount("SELECT COUNT(*) FROM subjects")));
+        lblDepartmentCount.setText(String.valueOf(getCount("SELECT COUNT(*) FROM departments")));
+        lblRoomCount.setText(String.valueOf(getCount("SELECT COUNT(*) FROM rooms")));
     }
 
-    private int getCount(String tableName) {
-        String sql = "SELECT COUNT(*) FROM " + tableName;
+    private int getCount(String sql) {
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
@@ -276,7 +266,7 @@ public class DashboardFrame extends JFrame {
                 return rs.getInt(1);
             }
         } catch (SQLException e) {
-            System.err.println("Unable to count " + tableName + ": " + e.getMessage());
+            util.DbErrors.show(this, "Dashboard Error", e);
         }
         return 0;
     }

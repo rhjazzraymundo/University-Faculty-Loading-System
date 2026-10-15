@@ -4,6 +4,8 @@ import dao.DepartmentDAO;
 import dao.FacultyDAO;
 import model.Department;
 import model.Faculty;
+import util.DbErrors;
+import util.Validator;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -191,7 +193,7 @@ public class FacultyFrame extends JFrame {
         try {
             displayFaculty(facultyDAO.getAllFaculty());
         } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this, "Error loading faculty: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            DbErrors.show(this, "Error loading faculty", e);
         }
     }
 
@@ -201,23 +203,32 @@ public class FacultyFrame extends JFrame {
         try {
             displayFaculty(facultyDAO.searchFaculty(keyword));
         } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this, "Error searching: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            DbErrors.show(this, "Error searching faculty", e);
         }
     }
 
     private void displayFaculty(List<Faculty> list) {
-        String[] cols = {"ID", "Employee No", "First Name", "Last Name", "Dept ID", "Email", "Contact", "Type", "Max Units", "Status"};
+        String[] cols = {"ID", "Employee No", "First Name", "Last Name", "Department", "Email", "Contact", "Type", "Max Units", "Status"};
         tableModel = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
         for (Faculty f : list) {
             tableModel.addRow(new Object[]{
                 f.getFacultyId(), f.getEmployeeNo(), f.getFirstName(), f.getLastName(),
-                f.getDepartmentId(), f.getEmail(), f.getContactNo(), f.getEmploymentType(),
+                getDeptCode(f.getDepartmentId()), f.getEmail(), f.getContactNo(), f.getEmploymentType(),
                 f.getMaxUnits(), f.getStatus()
             });
         }
         table.setModel(tableModel);
+    }
+
+    /** Department code (JOIN-style lookup) shown in the table instead of the numeric ID. */
+    private String getDeptCode(int id) {
+        for (int i = 0; i < cmbDepartment.getItemCount(); i++) {
+            Department d = cmbDepartment.getItemAt(i);
+            if (d.getDepartmentId() == id) return d.getDepartmentCode();
+        }
+        return "Unknown";
     }
 
     private void selectFaculty() {
@@ -229,9 +240,9 @@ public class FacultyFrame extends JFrame {
         txtFirstName.setText(table.getValueAt(row, 2).toString());
         txtLastName.setText(table.getValueAt(row, 3).toString());
 
-        int deptId = Integer.parseInt(table.getValueAt(row, 4).toString());
+        String deptCode = table.getValueAt(row, 4).toString();
         for (int i = 0; i < cmbDepartment.getItemCount(); i++) {
-            if (cmbDepartment.getItemAt(i).getDepartmentId() == deptId) {
+            if (cmbDepartment.getItemAt(i).getDepartmentCode().equals(deptCode)) {
                 cmbDepartment.setSelectedIndex(i);
                 break;
             }
@@ -258,7 +269,7 @@ public class FacultyFrame extends JFrame {
                 loadFaculty();
             }
         } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this, "Database error:\n" + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            DbErrors.show(this, "Database Error", e);
         }
     }
 
@@ -276,7 +287,7 @@ public class FacultyFrame extends JFrame {
                 loadFaculty();
             }
         } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this, "Database error:\n" + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            DbErrors.show(this, "Database Error", e);
         }
     }
 
@@ -296,8 +307,8 @@ public class FacultyFrame extends JFrame {
                 loadFaculty();
             }
         } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this, "Cannot delete faculty (may be assigned to active schedules):\n" + e.getMessage(),
-                    "Constraint Error", JOptionPane.ERROR_MESSAGE);
+            DbErrors.show(this, "Cannot delete faculty", e,
+                    "This faculty member is assigned to one or more schedules.\nUnassign those schedules first.");
         }
     }
 
@@ -325,6 +336,23 @@ public class FacultyFrame extends JFrame {
         Department d = (Department) cmbDepartment.getSelectedItem();
         if (d == null) {
             JOptionPane.showMessageDialog(this, "Please select a department.", "Validation Error", JOptionPane.WARNING_MESSAGE);
+            return null;
+        }
+
+        if (emp.length() > 20 || first.length() > 50 || last.length() > 50) {
+            JOptionPane.showMessageDialog(this,
+                    "Employee No is limited to 20 characters; names to 50 characters.",
+                    "Validation Error", JOptionPane.WARNING_MESSAGE);
+            return null;
+        }
+        if (!Validator.isValidEmailOrEmpty(txtEmail.getText())) {
+            JOptionPane.showMessageDialog(this, "Please enter a valid email address (example: name@university.edu).",
+                    "Validation Error", JOptionPane.WARNING_MESSAGE);
+            return null;
+        }
+        if (!Validator.isValidPhoneOrEmpty(txtContactNo.getText())) {
+            JOptionPane.showMessageDialog(this, "Contact No may only contain digits, spaces, +, - and ( ) (7-20 characters).",
+                    "Validation Error", JOptionPane.WARNING_MESSAGE);
             return null;
         }
 

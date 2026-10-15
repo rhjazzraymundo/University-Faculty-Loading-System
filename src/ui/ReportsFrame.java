@@ -23,14 +23,8 @@ public class ReportsFrame extends JFrame {
     private DefaultTableModel modelFacultySchedule;
     private List<Integer> facultyIds = new ArrayList<>();
 
-    private JComboBox<String> cmbRoomPicker;
-    private JComboBox<String> cmbRoomTerm;
-    private JTable tblRoomSchedule;
-    private DefaultTableModel modelRoomSchedule;
-    private List<Integer> roomIds = new ArrayList<>();
-
     public ReportsFrame() {
-        super("System Reports - Faculty Loading & Room Utilization");
+        super("System Reports - Faculty Loading");
         setSize(1100, 720);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -38,11 +32,9 @@ public class ReportsFrame extends JFrame {
         buildUI();
 
         loadFacultyList();
-        loadRoomList();
 
         loadFacultySummaryReport();
         loadFacultyScheduleReport();
-        loadRoomUtilizationReport();
     }
 
     private void buildUI() {
@@ -60,7 +52,7 @@ public class ReportsFrame extends JFrame {
         title.setFont(new Font("Segoe UI", Font.BOLD, 18));
         title.setForeground(Color.WHITE);
 
-        JLabel sub = new JLabel("Official faculty teaching load summaries, instructor timetables, and room utilization records");
+        JLabel sub = new JLabel("Official faculty teaching load summaries and instructor timetables");
         sub.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         sub.setForeground(Theme.HEADER_SUB);
 
@@ -77,7 +69,6 @@ public class ReportsFrame extends JFrame {
 
         tabbedPane.addTab("  1. Faculty Load Summary  ", createSummaryPanel());
         tabbedPane.addTab("  2. Schedule per Faculty  ", createFacultySchedulePanel());
-        tabbedPane.addTab("  3. Room Utilization  ", createRoomUtilizationPanel());
 
         JPanel tabContainer = new JPanel(new BorderLayout());
         tabContainer.setOpaque(false);
@@ -326,112 +317,6 @@ public class ReportsFrame extends JFrame {
     }
 
     // =========================================================================
-    // REPORT 3: ROOM UTILIZATION
-    // =========================================================================
-    private JPanel createRoomUtilizationPanel() {
-        JPanel panel = new JPanel(new BorderLayout(0, 10));
-        panel.setBackground(Theme.BACKGROUND);
-        panel.setBorder(new EmptyBorder(12, 12, 12, 12));
-
-        // FILTER CARD
-        JPanel filterCard = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 8));
-        filterCard.setBackground(Color.WHITE);
-        filterCard.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(Theme.BORDER, 1),
-                new EmptyBorder(6, 12, 6, 12)
-        ));
-
-        filterCard.add(new JLabel("Classroom / Lab:"));
-        cmbRoomPicker = new JComboBox<>();
-        filterCard.add(cmbRoomPicker);
-
-        filterCard.add(new JLabel("Term:"));
-        cmbRoomTerm = new JComboBox<>(new String[]{
-            "2026-2027 1st Sem", "2026-2027 2nd Sem", "Summer"
-        });
-        filterCard.add(cmbRoomTerm);
-
-        JButton btnFilter = createBtn("View Utilization", Theme.PRIMARY, 140);
-        filterCard.add(btnFilter);
-
-        panel.add(filterCard, BorderLayout.NORTH);
-
-        // TABLE CARD
-        JPanel tableCard = new JPanel(new BorderLayout());
-        tableCard.setBackground(Color.WHITE);
-        tableCard.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(Theme.BORDER, 1),
-                new EmptyBorder(10, 12, 10, 12)
-        ));
-
-        modelRoomSchedule = new DefaultTableModel(
-                new Object[]{
-                    "Day", "Time Slot", "Subject", "Section", "Instructor"
-                }, 0
-        ) {
-            @Override
-            public boolean isCellEditable(int r, int c) { return false; }
-        };
-
-        tblRoomSchedule = new JTable(modelRoomSchedule);
-        tblRoomSchedule.setRowHeight(26);
-        Theme.styleTable(tblRoomSchedule);
-
-        tableCard.add(new JScrollPane(tblRoomSchedule), BorderLayout.CENTER);
-        panel.add(tableCard, BorderLayout.CENTER);
-
-        btnFilter.addActionListener(e -> loadRoomUtilizationReport());
-        cmbRoomPicker.addActionListener(e -> loadRoomUtilizationReport());
-        cmbRoomTerm.addActionListener(e -> loadRoomUtilizationReport());
-
-        return panel;
-    }
-
-    private void loadRoomUtilizationReport() {
-        modelRoomSchedule.setRowCount(0);
-        int idx = cmbRoomPicker.getSelectedIndex();
-        if (idx < 0 || idx >= roomIds.size()) return;
-
-        int roomId = roomIds.get(idx);
-        String term = (String) cmbRoomTerm.getSelectedItem();
-
-        String sql = "SELECT s.day_of_week, s.start_time, s.end_time, "
-                   + "       sub.subject_code, s.section, "
-                   + "       f.first_name, f.last_name "
-                   + "FROM schedules s "
-                   + "INNER JOIN subjects sub ON s.subject_id = sub.subject_id "
-                   + "LEFT JOIN faculty f ON s.faculty_id = f.faculty_id "
-                   + "WHERE s.room_id = ? AND s.term = ? "
-                   + "ORDER BY CASE s.day_of_week WHEN 'Monday' THEN 1 WHEN 'Tuesday' THEN 2 WHEN 'Wednesday' THEN 3 WHEN 'Thursday' THEN 4 WHEN 'Friday' THEN 5 WHEN 'Saturday' THEN 6 ELSE 7 END, s.start_time";
-
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            ps.setInt(1, roomId);
-            ps.setString(2, term);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    String timeSlot = rs.getTime("start_time") + " - " + rs.getTime("end_time");
-                    String facultyName = rs.getString("first_name") != null
-                            ? rs.getString("first_name") + " " + rs.getString("last_name")
-                            : "Unassigned";
-
-                    modelRoomSchedule.addRow(new Object[]{
-                        rs.getString("day_of_week"),
-                        timeSlot,
-                        rs.getString("subject_code"),
-                        rs.getString("section"),
-                        facultyName
-                    });
-                }
-            }
-        } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this, "Error loading room utilization: " + e.getMessage(),
-                    "Database Error", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    // =========================================================================
     // BUTTON HELPER
     // =========================================================================
     private JButton createBtn(String text, Color bg, int width) {
@@ -459,22 +344,6 @@ public class ReportsFrame extends JFrame {
             }
         } catch (SQLException e) {
             System.err.println("Error loading faculty picker: " + e.getMessage());
-        }
-    }
-
-    private void loadRoomList() {
-        cmbRoomPicker.removeAllItems();
-        roomIds.clear();
-        String sql = "SELECT room_id, room_name FROM rooms ORDER BY room_name";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                roomIds.add(rs.getInt("room_id"));
-                cmbRoomPicker.addItem(rs.getString("room_name"));
-            }
-        } catch (SQLException e) {
-            System.err.println("Error loading room picker: " + e.getMessage());
         }
     }
 }

@@ -8,15 +8,12 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-/** Database operations for the USERS table. */
+/** Database operations for the USERS table (used by the login screen). */
 public class UserDAO {
 
     /**
-     * Checks the credentials against the USERS table.
-     *
-     * @return the matching Active user, or null if the username/password is wrong
-     *         or the account is Inactive
-     * @throws SQLException if the database cannot be reached
+     * Checks the username and password against the USERS table.
+     * @return the matching Active user, or null if the username/password is wrong or the account is Inactive
      */
     public User authenticate(String username, String password) throws SQLException {
         String sql = "SELECT user_id, username, password, full_name, role, status "

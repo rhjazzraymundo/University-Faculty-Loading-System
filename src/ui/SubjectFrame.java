@@ -4,12 +4,14 @@ import dao.DepartmentDAO;
 import dao.SubjectDAO;
 import model.Department;
 import model.Subject;
+import util.DbErrors;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.sql.SQLException;
 import java.util.List;
 
 public class SubjectFrame extends JFrame {
@@ -165,18 +167,30 @@ public class SubjectFrame extends JFrame {
 
     private void loadDepartments() {
         cmbDepartment.removeAllItems();
-        List<Department> list = departmentDAO.getAllDepartments();
-        for (Department d : list) cmbDepartment.addItem(d);
+        try {
+            List<Department> list = departmentDAO.getAllDepartments();
+            for (Department d : list) cmbDepartment.addItem(d);
+        } catch (SQLException e) {
+            DbErrors.show(this, "Error loading departments", e);
+        }
     }
 
     private void loadSubjects() {
-        displaySubjects(subjectDAO.getAllSubjects());
+        try {
+            displaySubjects(subjectDAO.getAllSubjects());
+        } catch (SQLException e) {
+            DbErrors.show(this, "Error loading subjects", e);
+        }
     }
 
     private void searchSubjects() {
         String keyword = txtSearch.getText().trim();
         if (keyword.isEmpty()) { loadSubjects(); return; }
-        displaySubjects(subjectDAO.searchSubjects(keyword));
+        try {
+            displaySubjects(subjectDAO.searchSubjects(keyword));
+        } catch (SQLException e) {
+            DbErrors.show(this, "Error searching subjects", e);
+        }
     }
 
     private void displaySubjects(List<Subject> list) {
@@ -221,12 +235,14 @@ public class SubjectFrame extends JFrame {
     private void saveSubject() {
         Subject s = getSubjectFromForm();
         if (s == null) return;
-        if (subjectDAO.addSubject(s)) {
-            JOptionPane.showMessageDialog(this, "Subject saved successfully.");
-            clearForm();
-            loadSubjects();
-        } else {
-            JOptionPane.showMessageDialog(this, "Failed to save subject.", "Error", JOptionPane.ERROR_MESSAGE);
+        try {
+            if (subjectDAO.addSubject(s)) {
+                JOptionPane.showMessageDialog(this, "Subject saved successfully.");
+                clearForm();
+                loadSubjects();
+            }
+        } catch (SQLException e) {
+            DbErrors.show(this, "Error saving subject", e);
         }
     }
 
@@ -238,12 +254,14 @@ public class SubjectFrame extends JFrame {
         Subject s = getSubjectFromForm();
         if (s == null) return;
         s.setSubjectId(selectedSubjectId);
-        if (subjectDAO.updateSubject(s)) {
-            JOptionPane.showMessageDialog(this, "Subject updated successfully.");
-            clearForm();
-            loadSubjects();
-        } else {
-            JOptionPane.showMessageDialog(this, "Failed to update subject.", "Error", JOptionPane.ERROR_MESSAGE);
+        try {
+            if (subjectDAO.updateSubject(s)) {
+                JOptionPane.showMessageDialog(this, "Subject updated successfully.");
+                clearForm();
+                loadSubjects();
+            }
+        } catch (SQLException e) {
+            DbErrors.show(this, "Error updating subject", e);
         }
     }
 
@@ -254,12 +272,15 @@ public class SubjectFrame extends JFrame {
         }
         if (JOptionPane.showConfirmDialog(this, "Are you sure you want to delete this subject?", "Confirm Delete", JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION) return;
 
-        if (subjectDAO.deleteSubject(selectedSubjectId)) {
-            JOptionPane.showMessageDialog(this, "Subject deleted successfully.");
-            clearForm();
-            loadSubjects();
-        } else {
-            JOptionPane.showMessageDialog(this, "Cannot delete subject (it may be scheduled).", "Error", JOptionPane.ERROR_MESSAGE);
+        try {
+            if (subjectDAO.deleteSubject(selectedSubjectId)) {
+                JOptionPane.showMessageDialog(this, "Subject deleted successfully.");
+                clearForm();
+                loadSubjects();
+            }
+        } catch (SQLException e) {
+            DbErrors.show(this, "Cannot delete subject", e,
+                    "This subject is used in one or more schedules.\nRemove those schedules first.");
         }
     }
 

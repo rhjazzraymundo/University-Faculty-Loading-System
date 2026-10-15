@@ -10,56 +10,76 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+/** Database operations for the DEPARTMENTS table. Every method throws SQLException so the UI can show it. */
 public class DepartmentDAO {
 
-    public List<Department> getAllDepartments() {
-
-        List<Department> departments = new ArrayList<>();
-
+    // READ
+    public List<Department> getAllDepartments() throws SQLException {
         String sql = "SELECT department_id, department_code, department_name "
-                   + "FROM departments "
-                   + "ORDER BY department_code";
-
+                   + "FROM departments ORDER BY department_code";
+        List<Department> list = new ArrayList<>();
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-
-            while (rs.next()) {
-
-                Department department = new Department();
-
-                department.setDepartmentId(
-                        rs.getInt("department_id")
-                );
-
-                department.setDepartmentCode(
-                        rs.getString("department_code")
-                );
-
-                department.setDepartmentName(
-                        rs.getString("department_name")
-                );
-
-                departments.add(department);
-            }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) list.add(map(rs));
         }
-
-        return departments;
+        return list;
     }
-    
+
+    // SEARCH (code or name)
+    public List<Department> searchDepartments(String keyword) throws SQLException {
+        String sql = "SELECT department_id, department_code, department_name FROM departments "
+                   + "WHERE UPPER(department_code) LIKE ? OR UPPER(department_name) LIKE ? "
+                   + "ORDER BY department_code";
+        String like = "%" + keyword.trim().toUpperCase() + "%";
+        List<Department> list = new ArrayList<>();
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, like);
+            ps.setString(2, like);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) list.add(map(rs));
+            }
+        }
+        return list;
+    }
+
+    // CREATE
     public boolean addDepartment(Department department) throws SQLException {
         String sql = "INSERT INTO departments (department_code, department_name) VALUES (?, ?)";
-
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setString(1, department.getDepartmentCode().trim());
-            stmt.setString(2, department.getDepartmentName().trim());
-
-            return stmt.executeUpdate() > 0;
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, department.getDepartmentCode().trim());
+            ps.setString(2, department.getDepartmentName().trim());
+            return ps.executeUpdate() > 0;
         }
+    }
+
+    // UPDATE
+    public boolean updateDepartment(Department department) throws SQLException {
+        String sql = "UPDATE departments SET department_code = ?, department_name = ? "
+                   + "WHERE department_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, department.getDepartmentCode().trim());
+            ps.setString(2, department.getDepartmentName().trim());
+            ps.setInt(3, department.getDepartmentId());
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    // DELETE (fails with SQLState 23503 if faculty or subjects use the department)
+    public boolean deleteDepartment(int departmentId) throws SQLException {
+        String sql = "DELETE FROM departments WHERE department_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, departmentId);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    private Department map(ResultSet rs) throws SQLException {
+        return new Department(rs.getInt("department_id"),
+                rs.getString("department_code"), rs.getString("department_name"));
     }
 }

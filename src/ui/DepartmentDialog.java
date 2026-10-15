@@ -2,6 +2,8 @@ package ui;
 
 import dao.DepartmentDAO;
 import model.Department;
+import util.DbErrors;
+import util.Validator;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -11,17 +13,20 @@ import java.awt.*;
 import java.sql.SQLException;
 import java.util.List;
 
+/** Department management: add, view, search, update, delete (admin only). */
 public class DepartmentDialog extends JDialog {
 
     private final DepartmentDAO departmentDAO = new DepartmentDAO();
     private final JTextField txtCode = new JTextField(10);
-    private final JTextField txtName = new JTextField(20);
+    private final JTextField txtName = new JTextField(22);
+    private final JTextField txtSearch = new JTextField(16);
     private final JTable table = new JTable();
     private DefaultTableModel tableModel;
+    private int selectedId = -1;
 
     public DepartmentDialog(JFrame parent) {
         super(parent, "Department Management", true);
-        setSize(700, 480);
+        setSize(780, 560);
         setLocationRelativeTo(parent);
 
         buildUI();
@@ -36,7 +41,6 @@ public class DepartmentDialog extends JDialog {
         JPanel header = new JPanel(new BorderLayout());
         header.setBackground(Theme.HEADER);
         header.setBorder(new EmptyBorder(12, 18, 12, 18));
-
         JLabel title = new JLabel("ACADEMIC DEPARTMENT REGISTRY");
         title.setFont(new Font("Segoe UI", Font.BOLD, 16));
         title.setForeground(Color.WHITE);
@@ -48,31 +52,44 @@ public class DepartmentDialog extends JDialog {
         body.setOpaque(false);
         body.setBorder(new EmptyBorder(10, 16, 12, 16));
 
-        // FORM CARD
-        JPanel form = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 8));
-        form.setBackground(Color.WHITE);
-        form.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(Theme.BORDER, 1),
-                new EmptyBorder(8, 12, 8, 12)
-        ));
+        // TOP: form card + search card
+        JPanel top = new JPanel(new GridLayout(2, 1, 0, 8));
+        top.setOpaque(false);
 
+        JPanel form = card();
         form.add(new JLabel("Dept Code:"));
         form.add(txtCode);
         form.add(new JLabel("Dept Name:"));
         form.add(txtName);
+        top.add(form);
 
-        JButton btnAdd = createBtn("Add Department", Theme.PRIMARY, 140);
-        form.add(btnAdd);
-        body.add(form, BorderLayout.NORTH);
+        JPanel actions = card();
+        JButton btnSave = createBtn("Save", Theme.PRIMARY, 85);
+        JButton btnUpdate = createBtn("Update", Theme.ACCENT, 85);
+        JButton btnDelete = createBtn("Delete", Theme.DANGER, 85);
+        JButton btnClear = createBtn("Clear", Theme.SECONDARY, 85);
+        actions.add(btnSave);
+        actions.add(btnUpdate);
+        actions.add(btnDelete);
+        actions.add(btnClear);
+        actions.add(new JLabel("   Search:"));
+        actions.add(txtSearch);
+        JButton btnSearch = createBtn("Search", Theme.PRIMARY, 85);
+        JButton btnShowAll = createBtn("Show All", Theme.SECONDARY, 90);
+        actions.add(btnSearch);
+        actions.add(btnShowAll);
+        top.add(actions);
 
-        // TABLE CARD
+        body.add(top, BorderLayout.NORTH);
+
+        // TABLE
         tableModel = new DefaultTableModel(new Object[]{"ID", "Department Code", "Department Name"}, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
         table.setModel(tableModel);
         table.setRowHeight(26);
+        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         Theme.styleTable(table);
-
         body.add(new JScrollPane(table), BorderLayout.CENTER);
 
         // BOTTOM
@@ -84,10 +101,28 @@ public class DepartmentDialog extends JDialog {
 
         root.add(body, BorderLayout.CENTER);
 
-        btnAdd.addActionListener(e -> saveDepartment());
+        // EVENTS
+        btnSave.addActionListener(e -> saveDepartment());
+        btnUpdate.addActionListener(e -> updateDepartment());
+        btnDelete.addActionListener(e -> deleteDepartment());
+        btnClear.addActionListener(e -> clearForm());
+        btnSearch.addActionListener(e -> searchDepartments());
+        txtSearch.addActionListener(e -> searchDepartments());
+        btnShowAll.addActionListener(e -> { txtSearch.setText(""); loadDepartments(); });
         btnClose.addActionListener(e -> dispose());
+        table.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) selectRow();
+        });
 
         setContentPane(root);
+    }
+
+    private JPanel card() {
+        JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 6));
+        p.setBackground(Color.WHITE);
+        p.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(Theme.BORDER, 1), new EmptyBorder(4, 12, 4, 12)));
+        return p;
     }
 
     private JButton createBtn(String text, Color bg, int width) {
@@ -102,30 +137,123 @@ public class DepartmentDialog extends JDialog {
         return btn;
     }
 
+    // ---------------------------------------------------------------- data
     private void loadDepartments() {
-        tableModel.setRowCount(0);
-        List<Department> list = departmentDAO.getAllDepartments();
-        for (Department d : list) {
-            tableModel.addRow(new Object[]{ d.getDepartmentId(), d.getDepartmentCode(), d.getDepartmentName() });
+        try {
+            display(departmentDAO.getAllDepartments());
+        } catch (SQLException e) {
+            DbErrors.show(this, "Error loading departments", e);
         }
     }
 
-    private void saveDepartment() {
+    private void searchDepartments() {
+        String keyword = txtSearch.getText().trim();
+        if (keyword.isEmpty()) { loadDepartments(); return; }
+        try {
+            List<Department> found = departmentDAO.searchDepartments(keyword);
+            display(found);
+            if (found.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "No matching departments found.",
+                        "Search", JOptionPane.INFORMATION_MESSAGE);
+            }
+        } catch (SQLException e) {
+            DbErrors.show(this, "Error searching departments", e);
+        }
+    }
+
+    private void display(List<Department> list) {
+        tableModel.setRowCount(0);
+        for (Department d : list) {
+            tableModel.addRow(new Object[]{d.getDepartmentId(), d.getDepartmentCode(), d.getDepartmentName()});
+        }
+        selectedId = -1;
+    }
+
+    private void selectRow() {
+        int row = table.getSelectedRow();
+        if (row == -1) return;
+        selectedId = Integer.parseInt(tableModel.getValueAt(row, 0).toString());
+        txtCode.setText(tableModel.getValueAt(row, 1).toString());
+        txtName.setText(tableModel.getValueAt(row, 2).toString());
+    }
+
+    // ------------------------------------------------------------- actions
+    private Department readForm() {
         String code = txtCode.getText().trim();
         String name = txtName.getText().trim();
-        if (code.isEmpty() || name.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Please enter both Department Code and Name.", "Input Error", JOptionPane.WARNING_MESSAGE);
-            return;
+        if (Validator.isBlank(code) || Validator.isBlank(name)) {
+            JOptionPane.showMessageDialog(this, "Please enter both Department Code and Name.",
+                    "Input Error", JOptionPane.WARNING_MESSAGE);
+            return null;
         }
+        if (code.length() > 20 || name.length() > 100) {
+            JOptionPane.showMessageDialog(this, "Code is limited to 20 characters and Name to 100.",
+                    "Input Error", JOptionPane.WARNING_MESSAGE);
+            return null;
+        }
+        return new Department(selectedId, code, name);
+    }
+
+    private void saveDepartment() {
+        Department d = readForm();
+        if (d == null) return;
         try {
-            if (departmentDAO.addDepartment(new Department(0, code, name))) {
+            if (departmentDAO.addDepartment(d)) {
                 JOptionPane.showMessageDialog(this, "Department added successfully.");
-                txtCode.setText("");
-                txtName.setText("");
+                clearForm();
                 loadDepartments();
             }
         } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(this, "Error adding department:\n" + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            DbErrors.show(this, "Error adding department", ex);
         }
+    }
+
+    private void updateDepartment() {
+        if (selectedId == -1) {
+            JOptionPane.showMessageDialog(this, "Please select a department to update.");
+            return;
+        }
+        Department d = readForm();
+        if (d == null) return;
+        try {
+            if (departmentDAO.updateDepartment(d)) {
+                JOptionPane.showMessageDialog(this, "Department updated successfully.");
+                clearForm();
+                loadDepartments();
+            } else {
+                JOptionPane.showMessageDialog(this, "The department no longer exists.",
+                        "Not Found", JOptionPane.WARNING_MESSAGE);
+                loadDepartments();
+            }
+        } catch (SQLException ex) {
+            DbErrors.show(this, "Error updating department", ex);
+        }
+    }
+
+    private void deleteDepartment() {
+        if (selectedId == -1) {
+            JOptionPane.showMessageDialog(this, "Please select a department to delete.");
+            return;
+        }
+        if (JOptionPane.showConfirmDialog(this, "Are you sure you want to delete this department?",
+                "Confirm Delete", JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION) return;
+        try {
+            if (departmentDAO.deleteDepartment(selectedId)) {
+                JOptionPane.showMessageDialog(this, "Department deleted successfully.");
+                clearForm();
+                loadDepartments();
+            }
+        } catch (SQLException ex) {
+            DbErrors.show(this, "Cannot delete department", ex,
+                    "This department still has faculty or subjects assigned to it.\n"
+                  + "Reassign or delete them first.");
+        }
+    }
+
+    private void clearForm() {
+        selectedId = -1;
+        txtCode.setText("");
+        txtName.setText("");
+        table.clearSelection();
     }
 }
