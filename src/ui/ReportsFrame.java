@@ -1,17 +1,23 @@
 package ui;
 
-import database.DatabaseConnection;
+import dao.FacultyDAO;
+import dao.ReportDAO;
+import model.Faculty;
+import util.DbErrors;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.sql.*;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
 public class ReportsFrame extends JFrame {
+
+    private final ReportDAO reportDAO = new ReportDAO();
+    private final FacultyDAO facultyDAO = new FacultyDAO();
 
     private JComboBox<String> cmbSummaryTerm;
     private JTable tblFacultySummary;
@@ -141,75 +147,31 @@ public class ReportsFrame extends JFrame {
         modelSummary.setRowCount(0);
         String term = (String) cmbSummaryTerm.getSelectedItem();
 
-        String sql = "SELECT f.faculty_id, f.employee_no, f.first_name, f.last_name, "
-                   + "       d.department_code, f.employment_type, f.max_units, "
-                   + "       COALESCE(SUM(sub.units), 0) AS total_units "
-                   + "FROM faculty f "
-                   + "INNER JOIN departments d ON f.department_id = d.department_id "
-                   + "LEFT JOIN schedules s ON f.faculty_id = s.faculty_id AND s.term = ? "
-                   + "LEFT JOIN subjects sub ON s.subject_id = sub.subject_id "
-                   + "WHERE f.status = 'Active' "
-                   + "GROUP BY f.faculty_id, f.employee_no, f.first_name, f.last_name, "
-                   + "         d.department_code, f.employment_type, f.max_units "
-                   + "ORDER BY d.department_code, f.last_name";
+        try {
+            for (Object[] r : reportDAO.getFacultyLoadSummary(term)) {
+                int assignedUnits = (Integer) r[4];
+                int maxUnits = (Integer) r[5];
+                double hours = (Double) r[6];
 
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            ps.setString(1, term);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    int facultyId = rs.getInt("faculty_id");
-                    String empNo = rs.getString("employee_no");
-                    String name = rs.getString("first_name") + " " + rs.getString("last_name");
-                    String dept = rs.getString("department_code");
-                    String type = rs.getString("employment_type");
-                    int assignedUnits = rs.getInt("total_units");
-                    int maxUnits = rs.getInt("max_units");
-
-                    double hours = calculateHoursForFaculty(facultyId, term);
-
-                    String loadStatus;
-                    if (assignedUnits == 0) {
-                        loadStatus = "No Load";
-                    } else if (assignedUnits == maxUnits) {
-                        loadStatus = "Full Load";
-                    } else if (assignedUnits > maxUnits) {
-                        loadStatus = "OVERLOAD";
-                    } else {
-                        loadStatus = "Normal";
-                    }
-
-                    modelSummary.addRow(new Object[]{
-                        empNo, name, dept, type, assignedUnits, maxUnits,
-                        String.format("%.1f hrs", hours), loadStatus
-                    });
+                String loadStatus;
+                if (assignedUnits == 0) {
+                    loadStatus = "No Load";
+                } else if (assignedUnits == maxUnits) {
+                    loadStatus = "Full Load";
+                } else if (assignedUnits > maxUnits) {
+                    loadStatus = "OVERLOAD";
+                } else {
+                    loadStatus = "Normal";
                 }
+
+                modelSummary.addRow(new Object[]{
+                    r[0], r[1], r[2], r[3], assignedUnits, maxUnits,
+                    String.format("%.1f hrs", hours), loadStatus
+                });
             }
         } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this, "Error generating summary: " + e.getMessage(),
-                    "Database Error", JOptionPane.ERROR_MESSAGE);
+            DbErrors.show(this, "Error generating summary", e);
         }
-    }
-
-    private double calculateHoursForFaculty(int facultyId, String term) {
-        String sql = "SELECT start_time, end_time FROM schedules WHERE faculty_id = ? AND term = ?";
-        double total = 0.0;
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, facultyId);
-            ps.setString(2, term);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    Time start = rs.getTime("start_time");
-                    Time end = rs.getTime("end_time");
-                    if (start != null && end != null) {
-                        total += (end.getTime() - start.getTime()) / (1000.0 * 60 * 60);
-                    }
-                }
-            }
-        } catch (SQLException e) { }
-        return total;
     }
 
     // =========================================================================
@@ -282,37 +244,12 @@ public class ReportsFrame extends JFrame {
         int facultyId = facultyIds.get(idx);
         String term = (String) cmbFacultyTerm.getSelectedItem();
 
-        String sql = "SELECT s.day_of_week, s.start_time, s.end_time, "
-                   + "       sub.subject_code, sub.subject_title, sub.units, "
-                   + "       s.section, r.room_name "
-                   + "FROM schedules s "
-                   + "INNER JOIN subjects sub ON s.subject_id = sub.subject_id "
-                   + "INNER JOIN rooms r ON s.room_id = r.room_id "
-                   + "WHERE s.faculty_id = ? AND s.term = ? "
-                   + "ORDER BY CASE s.day_of_week WHEN 'Monday' THEN 1 WHEN 'Tuesday' THEN 2 WHEN 'Wednesday' THEN 3 WHEN 'Thursday' THEN 4 WHEN 'Friday' THEN 5 WHEN 'Saturday' THEN 6 ELSE 7 END, s.start_time";
-
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            ps.setInt(1, facultyId);
-            ps.setString(2, term);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    String timeSlot = rs.getTime("start_time") + " - " + rs.getTime("end_time");
-                    modelFacultySchedule.addRow(new Object[]{
-                        rs.getString("day_of_week"),
-                        timeSlot,
-                        rs.getString("subject_code"),
-                        rs.getString("subject_title"),
-                        rs.getInt("units"),
-                        rs.getString("section"),
-                        rs.getString("room_name")
-                    });
-                }
+        try {
+            for (Object[] row : reportDAO.getFacultyTimetable(facultyId, term)) {
+                modelFacultySchedule.addRow(row);
             }
         } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this, "Error loading faculty timetable: " + e.getMessage(),
-                    "Database Error", JOptionPane.ERROR_MESSAGE);
+            DbErrors.show(this, "Error loading faculty timetable", e);
         }
     }
 
@@ -334,16 +271,13 @@ public class ReportsFrame extends JFrame {
     private void loadFacultyList() {
         cmbFacultyPicker.removeAllItems();
         facultyIds.clear();
-        String sql = "SELECT faculty_id, first_name, last_name FROM faculty WHERE status = 'Active' ORDER BY last_name";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                facultyIds.add(rs.getInt("faculty_id"));
-                cmbFacultyPicker.addItem(rs.getString("first_name") + " " + rs.getString("last_name"));
+        try {
+            for (Faculty f : facultyDAO.getActiveFaculty()) {
+                facultyIds.add(f.getFacultyId());
+                cmbFacultyPicker.addItem(f.getFirstName() + " " + f.getLastName());
             }
         } catch (SQLException e) {
-            System.err.println("Error loading faculty picker: " + e.getMessage());
+            DbErrors.show(this, "Error loading instructors", e);
         }
     }
 }

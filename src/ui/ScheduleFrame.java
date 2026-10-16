@@ -1,16 +1,23 @@
 package ui;
 
+import dao.FacultyDAO;
+import dao.RoomDAO;
 import dao.ScheduleDAO;
-import database.DatabaseConnection;
+import dao.SubjectDAO;
+import model.Faculty;
+import model.Room;
 import model.Schedule;
+import model.Subject;
 import util.ConflictChecker;
+import util.DbErrors;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.sql.*;
+import java.sql.SQLException;
+import java.sql.Time;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,6 +39,9 @@ public class ScheduleFrame extends JFrame {
     private DefaultTableModel tableModel;
 
     private ScheduleDAO scheduleDAO;
+    private final SubjectDAO subjectDAO = new SubjectDAO();
+    private final FacultyDAO facultyDAO = new FacultyDAO();
+    private final RoomDAO roomDAO = new RoomDAO();
     private int selectedScheduleId = -1;
 
     private List<Integer> subjectIds = new ArrayList<>();
@@ -222,75 +232,82 @@ public class ScheduleFrame extends JFrame {
 
         int fId = facultyIds.get(idx);
         String term = (String) cmbTerm.getSelectedItem();
-        int units = scheduleDAO.getTotalAssignedUnits(fId, term, selectedScheduleId);
-        double hrs = scheduleDAO.getTotalAssignedHours(fId, term, selectedScheduleId);
-        int max = scheduleDAO.getFacultyMaxUnits(fId);
+        try {
+            int units = scheduleDAO.getTotalAssignedUnits(fId, term, selectedScheduleId);
+            double hrs = scheduleDAO.getTotalAssignedHours(fId, term, selectedScheduleId);
+            int max = scheduleDAO.getFacultyMaxUnits(fId);
 
-        lblFacultyLoad.setText(String.format("Units: %d / %d  |  Hours: %.1f hrs/week", units, max, hrs));
-        if (units > max) {
+            lblFacultyLoad.setText(String.format("Units: %d / %d  |  Hours: %.1f hrs/week", units, max, hrs));
+            if (units > max) {
+                lblFacultyLoad.setForeground(Theme.STATUS_OVER);
+            } else if (units >= max - 3) {
+                lblFacultyLoad.setForeground(Theme.STATUS_WARN);
+            } else {
+                lblFacultyLoad.setForeground(Theme.STATUS_OK);
+            }
+        } catch (SQLException e) {
+            // shown in the label (not a pop-up) because this runs every time a dropdown changes
+            lblFacultyLoad.setText("Cannot load faculty load: database error");
             lblFacultyLoad.setForeground(Theme.STATUS_OVER);
-        } else if (units >= max - 3) {
-            lblFacultyLoad.setForeground(Theme.STATUS_WARN);
-        } else {
-            lblFacultyLoad.setForeground(Theme.STATUS_OK);
         }
     }
 
     private void loadSubjects() {
         cmbSubject.removeAllItems();
         subjectIds.clear();
-        String sql = "SELECT subject_id, subject_code, subject_title, units FROM subjects ORDER BY subject_code";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                subjectIds.add(rs.getInt("subject_id"));
-                cmbSubject.addItem(rs.getString("subject_code") + " - " + rs.getString("subject_title") + " (" + rs.getInt("units") + "u)");
+        try {
+            for (Subject sub : subjectDAO.getAllSubjects()) {
+                subjectIds.add(sub.getSubjectId());
+                cmbSubject.addItem(sub.getSubjectCode() + " - " + sub.getSubjectTitle() + " (" + sub.getUnits() + "u)");
             }
-        } catch (SQLException e) { System.err.println(e.getMessage()); }
+        } catch (SQLException e) {
+            DbErrors.show(this, "Error loading subjects", e);
+        }
     }
 
     private void loadFaculty() {
         cmbFaculty.removeAllItems();
         facultyIds.clear();
-        String sql = "SELECT faculty_id, employee_no, first_name, last_name, max_units FROM faculty WHERE status = 'Active' ORDER BY last_name";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                facultyIds.add(rs.getInt("faculty_id"));
-                cmbFaculty.addItem(rs.getString("employee_no") + " - " + rs.getString("first_name") + " " + rs.getString("last_name") + " (Max: " + rs.getInt("max_units") + "u)");
+        try {
+            for (Faculty f : facultyDAO.getActiveFaculty()) {
+                facultyIds.add(f.getFacultyId());
+                cmbFaculty.addItem(f.getEmployeeNo() + " - " + f.getFirstName() + " " + f.getLastName()
+                        + " (Max: " + f.getMaxUnits() + "u)");
             }
-        } catch (SQLException e) { System.err.println(e.getMessage()); }
+        } catch (SQLException e) {
+            DbErrors.show(this, "Error loading faculty", e);
+        }
     }
 
     private void loadRooms() {
         cmbRoom.removeAllItems();
         roomIds.clear();
-        String sql = "SELECT room_id, room_name FROM rooms ORDER BY room_name";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                roomIds.add(rs.getInt("room_id"));
-                cmbRoom.addItem(rs.getString("room_name"));
+        try {
+            for (Room r : roomDAO.getAllRooms()) {
+                roomIds.add(r.getRoomId());
+                cmbRoom.addItem(r.getRoomName());
             }
-        } catch (SQLException e) { System.err.println(e.getMessage()); }
+        } catch (SQLException e) {
+            DbErrors.show(this, "Error loading rooms", e);
+        }
     }
 
     private void saveSchedule() {
         Schedule sched = getScheduleFromForm();
         if (sched == null) return;
 
-        if (isOverloaded(sched, -1)) return;
-        if (ConflictChecker.hasConflict(this, sched, -1)) return;
+        try {
+            if (isOverloaded(sched, -1)) return;
+            if (ConflictChecker.hasConflict(this, sched, -1)) return;
 
-        if (scheduleDAO.addSchedule(sched)) {
-            JOptionPane.showMessageDialog(this, "Schedule added successfully.");
-            clearForm();
-            loadSchedules();
-        } else {
-            JOptionPane.showMessageDialog(this, "Failed to add schedule.", "Error", JOptionPane.ERROR_MESSAGE);
+            if (scheduleDAO.addSchedule(sched)) {
+                JOptionPane.showMessageDialog(this, "Schedule added successfully.");
+                clearForm();
+                loadSchedules();
+            }
+        } catch (SQLException e) {
+            DbErrors.show(this, "Error adding schedule", e,
+                    "The selected subject, faculty or room no longer exists.\nClose and reopen this screen, then try again.");
         }
     }
 
@@ -303,19 +320,26 @@ public class ScheduleFrame extends JFrame {
         if (sched == null) return;
         sched.setScheduleId(selectedScheduleId);
 
-        if (isOverloaded(sched, selectedScheduleId)) return;
-        if (ConflictChecker.hasConflict(this, sched, selectedScheduleId)) return;
+        try {
+            if (isOverloaded(sched, selectedScheduleId)) return;
+            if (ConflictChecker.hasConflict(this, sched, selectedScheduleId)) return;
 
-        if (scheduleDAO.updateSchedule(sched)) {
-            JOptionPane.showMessageDialog(this, "Schedule updated successfully.");
-            clearForm();
-            loadSchedules();
-        } else {
-            JOptionPane.showMessageDialog(this, "Failed to update schedule.", "Error", JOptionPane.ERROR_MESSAGE);
+            if (scheduleDAO.updateSchedule(sched)) {
+                JOptionPane.showMessageDialog(this, "Schedule updated successfully.");
+                clearForm();
+                loadSchedules();
+            } else {
+                JOptionPane.showMessageDialog(this, "The schedule no longer exists.",
+                        "Not Found", JOptionPane.WARNING_MESSAGE);
+                loadSchedules();
+            }
+        } catch (SQLException e) {
+            DbErrors.show(this, "Error updating schedule", e,
+                    "The selected subject, faculty or room no longer exists.\nClose and reopen this screen, then try again.");
         }
     }
 
-    private boolean isOverloaded(Schedule s, int excludeId) {
+    private boolean isOverloaded(Schedule s, int excludeId) throws SQLException {
         int u = scheduleDAO.getSubjectUnits(s.getSubjectId());
         int cur = scheduleDAO.getTotalAssignedUnits(s.getFacultyId(), s.getTerm(), excludeId);
         int max = scheduleDAO.getFacultyMaxUnits(s.getFacultyId());
@@ -335,10 +359,14 @@ public class ScheduleFrame extends JFrame {
         }
         if (JOptionPane.showConfirmDialog(this, "Are you sure you want to delete this schedule?", "Confirm Delete", JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION) return;
 
-        if (scheduleDAO.deleteSchedule(selectedScheduleId)) {
-            JOptionPane.showMessageDialog(this, "Schedule deleted.");
-            clearForm();
-            loadSchedules();
+        try {
+            if (scheduleDAO.deleteSchedule(selectedScheduleId)) {
+                JOptionPane.showMessageDialog(this, "Schedule deleted.");
+                clearForm();
+                loadSchedules();
+            }
+        } catch (SQLException e) {
+            DbErrors.show(this, "Cannot delete schedule", e);
         }
     }
 
@@ -382,56 +410,25 @@ public class ScheduleFrame extends JFrame {
     }
 
     private void loadSchedules() {
-        tableModel.setRowCount(0);
-        String sql = "SELECT s.schedule_id, s.section, s.term, s.day_of_week, s.start_time, s.end_time, "
-                   + "       sub.subject_code, sub.units, f.first_name, f.last_name, r.room_name "
-                   + "FROM schedules s "
-                   + "INNER JOIN subjects sub ON s.subject_id = sub.subject_id "
-                   + "LEFT JOIN faculty f ON s.faculty_id = f.faculty_id "
-                   + "INNER JOIN rooms r ON s.room_id = r.room_id "
-                   + "ORDER BY CASE s.day_of_week WHEN 'Monday' THEN 1 WHEN 'Tuesday' THEN 2 WHEN 'Wednesday' THEN 3 WHEN 'Thursday' THEN 4 WHEN 'Friday' THEN 5 WHEN 'Saturday' THEN 6 ELSE 7 END, s.start_time";
-
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                String fname = rs.getString("first_name") != null ? rs.getString("first_name") + " " + rs.getString("last_name") : "Unassigned";
-                tableModel.addRow(new Object[]{
-                    rs.getInt("schedule_id"), rs.getString("subject_code"), rs.getInt("units"),
-                    fname, rs.getString("room_name"), rs.getString("section"), rs.getString("term"),
-                    rs.getString("day_of_week"), rs.getTime("start_time"), rs.getTime("end_time")
-                });
-            }
-        } catch (SQLException e) { System.err.println(e.getMessage()); }
+        showScheduleRows(null, "Error loading schedules");
     }
 
     private void searchSchedules() {
         String kw = txtSearch.getText().trim();
         if (kw.isEmpty()) { loadSchedules(); return; }
-        tableModel.setRowCount(0);
-        String sql = "SELECT s.schedule_id, s.section, s.term, s.day_of_week, s.start_time, s.end_time, "
-                   + "       sub.subject_code, sub.units, f.first_name, f.last_name, r.room_name "
-                   + "FROM schedules s "
-                   + "INNER JOIN subjects sub ON s.subject_id = sub.subject_id "
-                   + "LEFT JOIN faculty f ON s.faculty_id = f.faculty_id "
-                   + "INNER JOIN rooms r ON s.room_id = r.room_id "
-                   + "WHERE LOWER(sub.subject_code) LIKE ? OR LOWER(s.section) LIKE ? OR LOWER(r.room_name) LIKE ? "
-                   + "ORDER BY CASE s.day_of_week WHEN 'Monday' THEN 1 WHEN 'Tuesday' THEN 2 WHEN 'Wednesday' THEN 3 WHEN 'Thursday' THEN 4 WHEN 'Friday' THEN 5 WHEN 'Saturday' THEN 6 ELSE 7 END, s.start_time";
+        showScheduleRows(kw, "Error searching schedules");
+    }
 
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            String p = "%" + kw.toLowerCase() + "%";
-            ps.setString(1, p); ps.setString(2, p); ps.setString(3, p);
-            ResultSet rs = ps.executeQuery();
-            while (rs.next()) {
-                String fname = rs.getString("first_name") != null ? rs.getString("first_name") + " " + rs.getString("last_name") : "Unassigned";
-                tableModel.addRow(new Object[]{
-                    rs.getInt("schedule_id"), rs.getString("subject_code"), rs.getInt("units"),
-                    fname, rs.getString("room_name"), rs.getString("section"), rs.getString("term"),
-                    rs.getString("day_of_week"), rs.getTime("start_time"), rs.getTime("end_time")
-                });
+    /** Fills the table from ScheduleDAO (keyword null = all schedules). */
+    private void showScheduleRows(String keyword, String errorTitle) {
+        tableModel.setRowCount(0);
+        try {
+            for (Object[] row : scheduleDAO.getScheduleRows(keyword)) {
+                tableModel.addRow(row);
             }
-        } catch (SQLException e) { System.err.println(e.getMessage()); }
+        } catch (SQLException e) {
+            DbErrors.show(this, errorTitle, e);
+        }
     }
 
     private void selectSchedule() {

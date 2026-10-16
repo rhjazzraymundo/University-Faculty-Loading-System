@@ -2,11 +2,22 @@ package dao;
 
 import database.DatabaseConnection;
 import model.Schedule;
+import model.ScheduleConflict;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Time;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Database operations for the SCHEDULES table: CRUD, load calculations and conflict checks.
+ * Every method throws SQLException so the screen can show a clear message
+ * (nothing is hidden or silently turned into 0 / false).
+ */
 public class ScheduleDAO {
 
     /** Sorts days Monday to Saturday instead of alphabetically. */
@@ -15,282 +26,278 @@ public class ScheduleDAO {
           + "WHEN 'Thursday' THEN 4 WHEN 'Friday' THEN 5 WHEN 'Saturday' THEN 6 ELSE 7 END";
 
     /** An unassigned faculty (id 0 or less) is stored as NULL so the foreign key stays valid. */
-    private static void setFaculty(PreparedStatement pst, int index, int facultyId) throws SQLException {
-        if (facultyId <= 0) pst.setNull(index, Types.INTEGER);
-        else pst.setInt(index, facultyId);
+    private static void setFaculty(PreparedStatement ps, int index, int facultyId) throws SQLException {
+        if (facultyId <= 0) ps.setNull(index, Types.INTEGER);
+        else ps.setInt(index, facultyId);
     }
 
-    // ADD
-    public boolean addSchedule(Schedule schedule) {
-
+    // =====================================================================
+    // CREATE
+    // =====================================================================
+    public boolean addSchedule(Schedule schedule) throws SQLException {
         String sql = "INSERT INTO schedules "
-                + "(subject_id, faculty_id, room_id, section, term, "
-                + "day_of_week, start_time, end_time) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-
+                   + "(subject_id, faculty_id, room_id, section, term, day_of_week, start_time, end_time) "
+                   + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pst = conn.prepareStatement(sql)) {
-
-            pst.setInt(1, schedule.getSubjectId());
-            setFaculty(pst, 2, schedule.getFacultyId());
-            pst.setInt(3, schedule.getRoomId());
-            pst.setString(4, schedule.getSection());
-            pst.setString(5, schedule.getTerm());
-            pst.setString(6, schedule.getDayOfWeek());
-            pst.setTime(7, schedule.getStartTime());
-            pst.setTime(8, schedule.getEndTime());
-
-            return pst.executeUpdate() > 0;
-
-        } catch (SQLException e) {
-            System.out.println("Error adding schedule: " + e.getMessage());
-            return false;
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, schedule.getSubjectId());
+            setFaculty(ps, 2, schedule.getFacultyId());
+            ps.setInt(3, schedule.getRoomId());
+            ps.setString(4, schedule.getSection());
+            ps.setString(5, schedule.getTerm());
+            ps.setString(6, schedule.getDayOfWeek());
+            ps.setTime(7, schedule.getStartTime());
+            ps.setTime(8, schedule.getEndTime());
+            return ps.executeUpdate() > 0;
         }
     }
 
-    // GET ALL
-    public List<Schedule> getAllSchedules() {
+    // =====================================================================
+    // READ / SEARCH  (JOIN of schedules, subjects, faculty and rooms)
+    // Each row matches the columns of the Schedules table:
+    // id, subject code, units, faculty name, room, section, term, day, start, end
+    // keyword = null or empty returns everything.
+    // =====================================================================
+    public List<Object[]> getScheduleRows(String keyword) throws SQLException {
+        boolean all = keyword == null || keyword.trim().isEmpty();
+        String sql = "SELECT s.schedule_id, s.section, s.term, s.day_of_week, s.start_time, s.end_time, "
+                   + "       sub.subject_code, sub.units, f.first_name, f.last_name, r.room_name "
+                   + "FROM schedules s "
+                   + "INNER JOIN subjects sub ON s.subject_id = sub.subject_id "
+                   + "LEFT JOIN faculty f ON s.faculty_id = f.faculty_id "
+                   + "INNER JOIN rooms r ON s.room_id = r.room_id "
+                   + (all ? "" : "WHERE LOWER(sub.subject_code) LIKE ? OR LOWER(s.section) LIKE ? "
+                               + "OR LOWER(r.room_name) LIKE ? ")
+                   + "ORDER BY " + DAY_ORDER + ", s.start_time";
 
-        List<Schedule> schedules = new ArrayList<>();
-
-        String sql = "SELECT schedule_id, subject_id, faculty_id, "
-                + "room_id, section, term, day_of_week, start_time, end_time "
-                + "FROM schedules "
-                + "ORDER BY "
-                + DAY_ORDER + ", start_time";
-
+        List<Object[]> rows = new ArrayList<>();
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pst = conn.prepareStatement(sql);
-             ResultSet rs = pst.executeQuery()) {
-
-            while (rs.next()) {
-
-                Schedule schedule = new Schedule();
-
-                schedule.setScheduleId(rs.getInt("schedule_id"));
-                schedule.setSubjectId(rs.getInt("subject_id"));
-                schedule.setFacultyId(rs.getInt("faculty_id"));
-                schedule.setRoomId(rs.getInt("room_id"));
-                schedule.setSection(rs.getString("section"));
-                schedule.setTerm(rs.getString("term"));
-                schedule.setDayOfWeek(rs.getString("day_of_week"));
-                schedule.setStartTime(rs.getTime("start_time"));
-                schedule.setEndTime(rs.getTime("end_time"));
-
-                schedules.add(schedule);
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            if (!all) {
+                String like = "%" + keyword.trim().toLowerCase() + "%";
+                ps.setString(1, like);
+                ps.setString(2, like);
+                ps.setString(3, like);
             }
-
-        } catch (SQLException e) {
-            System.out.println("Error loading schedules: " + e.getMessage());
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String faculty = rs.getString("first_name") != null
+                            ? rs.getString("first_name") + " " + rs.getString("last_name")
+                            : "Unassigned";
+                    rows.add(new Object[]{
+                        rs.getInt("schedule_id"), rs.getString("subject_code"), rs.getInt("units"),
+                        faculty, rs.getString("room_name"), rs.getString("section"), rs.getString("term"),
+                        rs.getString("day_of_week"), rs.getTime("start_time"), rs.getTime("end_time")
+                    });
+                }
+            }
         }
-
-        return schedules;
+        return rows;
     }
 
+    // =====================================================================
     // UPDATE
-    public boolean updateSchedule(Schedule schedule) {
-
-        String sql = "UPDATE schedules SET "
-                + "subject_id = ?, "
-                + "faculty_id = ?, "
-                + "room_id = ?, "
-                + "section = ?, "
-                + "term = ?, "
-                + "day_of_week = ?, "
-                + "start_time = ?, "
-                + "end_time = ? "
-                + "WHERE schedule_id = ?";
-
+    // =====================================================================
+    public boolean updateSchedule(Schedule schedule) throws SQLException {
+        String sql = "UPDATE schedules SET subject_id = ?, faculty_id = ?, room_id = ?, section = ?, "
+                   + "term = ?, day_of_week = ?, start_time = ?, end_time = ? WHERE schedule_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pst = conn.prepareStatement(sql)) {
-
-            pst.setInt(1, schedule.getSubjectId());
-            setFaculty(pst, 2, schedule.getFacultyId());
-            pst.setInt(3, schedule.getRoomId());
-            pst.setString(4, schedule.getSection());
-            pst.setString(5, schedule.getTerm());
-            pst.setString(6, schedule.getDayOfWeek());
-            pst.setTime(7, schedule.getStartTime());
-            pst.setTime(8, schedule.getEndTime());
-            pst.setInt(9, schedule.getScheduleId());
-
-            return pst.executeUpdate() > 0;
-
-        } catch (SQLException e) {
-            System.out.println("Error updating schedule: " + e.getMessage());
-            return false;
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, schedule.getSubjectId());
+            setFaculty(ps, 2, schedule.getFacultyId());
+            ps.setInt(3, schedule.getRoomId());
+            ps.setString(4, schedule.getSection());
+            ps.setString(5, schedule.getTerm());
+            ps.setString(6, schedule.getDayOfWeek());
+            ps.setTime(7, schedule.getStartTime());
+            ps.setTime(8, schedule.getEndTime());
+            ps.setInt(9, schedule.getScheduleId());
+            return ps.executeUpdate() > 0;
         }
     }
 
+    // =====================================================================
     // DELETE
-    public boolean deleteSchedule(int scheduleId) {
-
+    // =====================================================================
+    public boolean deleteSchedule(int scheduleId) throws SQLException {
         String sql = "DELETE FROM schedules WHERE schedule_id = ?";
-
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pst = conn.prepareStatement(sql)) {
-
-            pst.setInt(1, scheduleId);
-
-            return pst.executeUpdate() > 0;
-
-        } catch (SQLException e) {
-            System.out.println("Error deleting schedule: " + e.getMessage());
-            return false;
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, scheduleId);
+            return ps.executeUpdate() > 0;
         }
     }
 
-    // SEARCH
-    public List<Schedule> searchSchedules(String keyword) {
-
-        List<Schedule> schedules = new ArrayList<>();
-
-        String sql = "SELECT s.schedule_id, s.subject_id, s.faculty_id, "
-                + "s.room_id, s.section, s.term, s.day_of_week, "
-                + "s.start_time, s.end_time "
-                + "FROM schedules s "
-                + "WHERE LOWER(s.section) LIKE ? "
-                + "OR LOWER(s.term) LIKE ? "
-                + "OR LOWER(s.day_of_week) LIKE ? "
-                + "ORDER BY "
-                + DAY_ORDER + ", s.start_time";
-
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pst = conn.prepareStatement(sql)) {
-
-            String search = "%" + keyword.toLowerCase() + "%";
-
-            pst.setString(1, search);
-            pst.setString(2, search);
-            pst.setString(3, search);
-
-            ResultSet rs = pst.executeQuery();
-
-            while (rs.next()) {
-
-                Schedule schedule = new Schedule();
-
-                schedule.setScheduleId(rs.getInt("schedule_id"));
-                schedule.setSubjectId(rs.getInt("subject_id"));
-                schedule.setFacultyId(rs.getInt("faculty_id"));
-                schedule.setRoomId(rs.getInt("room_id"));
-                schedule.setSection(rs.getString("section"));
-                schedule.setTerm(rs.getString("term"));
-                schedule.setDayOfWeek(rs.getString("day_of_week"));
-                schedule.setStartTime(rs.getTime("start_time"));
-                schedule.setEndTime(rs.getTime("end_time"));
-
-                schedules.add(schedule);
-            }
-
-        } catch (SQLException e) {
-            System.out.println("Error searching schedules: " + e.getMessage());
-        }
-
-        return schedules;
-    }
-    // ==========================================
-    // DAY 6: TEACHING LOAD CALCULATIONS & RULES
-    // ==========================================
-
-    /**
-     * Calculates total units currently assigned to a faculty in a given term.
-     * excludeScheduleId is used when updating so the current record isn't double-counted (pass -1 when adding).
-     */
-    public int getTotalAssignedUnits(int facultyId, String term, int excludeScheduleId) {
+    // =====================================================================
+    // TEACHING LOAD CALCULATIONS
+    // excludeScheduleId is used when updating so the record being edited is not
+    // counted twice (pass -1 when adding).
+    // =====================================================================
+    public int getTotalAssignedUnits(int facultyId, String term, int excludeScheduleId) throws SQLException {
         String sql = "SELECT COALESCE(SUM(sub.units), 0) AS total_units "
                    + "FROM schedules s "
                    + "INNER JOIN subjects sub ON s.subject_id = sub.subject_id "
                    + "WHERE s.faculty_id = ? AND s.term = ? AND s.schedule_id <> ?";
-
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pst = conn.prepareStatement(sql)) {
-
-            pst.setInt(1, facultyId);
-            pst.setString(2, term);
-            pst.setInt(3, excludeScheduleId);
-
-            try (ResultSet rs = pst.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getInt("total_units");
-                }
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, facultyId);
+            ps.setString(2, term);
+            ps.setInt(3, excludeScheduleId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt("total_units") : 0;
             }
-        } catch (SQLException e) {
-            System.err.println("Error calculating faculty units: " + e.getMessage());
         }
-        return 0;
     }
 
-    /**
-     * Calculates total weekly hours assigned to a faculty in a given term.
-     */
-    public double getTotalAssignedHours(int facultyId, String term, int excludeScheduleId) {
-        String sql = "SELECT s.start_time, s.end_time "
-                   + "FROM schedules s "
-                   + "WHERE s.faculty_id = ? AND s.term = ? AND s.schedule_id <> ?";
-
+    public double getTotalAssignedHours(int facultyId, String term, int excludeScheduleId) throws SQLException {
+        String sql = "SELECT start_time, end_time FROM schedules "
+                   + "WHERE faculty_id = ? AND term = ? AND schedule_id <> ?";
         double totalHours = 0.0;
-
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pst = conn.prepareStatement(sql)) {
-
-            pst.setInt(1, facultyId);
-            pst.setString(2, term);
-            pst.setInt(3, excludeScheduleId);
-
-            try (ResultSet rs = pst.executeQuery()) {
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, facultyId);
+            ps.setString(2, term);
+            ps.setInt(3, excludeScheduleId);
+            try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     Time start = rs.getTime("start_time");
                     Time end = rs.getTime("end_time");
                     if (start != null && end != null) {
-                        long diffMillis = end.getTime() - start.getTime();
-                        totalHours += diffMillis / (1000.0 * 60 * 60);
+                        totalHours += (end.getTime() - start.getTime()) / (1000.0 * 60 * 60);
                     }
                 }
             }
-        } catch (SQLException e) {
-            System.err.println("Error calculating faculty hours: " + e.getMessage());
         }
         return totalHours;
     }
 
-    /**
-     * Gets the number of units for a specific subject.
-     */
-    public int getSubjectUnits(int subjectId) {
+    public int getSubjectUnits(int subjectId) throws SQLException {
         String sql = "SELECT units FROM subjects WHERE subject_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pst = conn.prepareStatement(sql)) {
-
-            pst.setInt(1, subjectId);
-            try (ResultSet rs = pst.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getInt("units");
-                }
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, subjectId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt("units") : 0;
             }
-        } catch (SQLException e) {
-            System.err.println("Error fetching subject units: " + e.getMessage());
         }
-        return 0;
     }
 
-    /**
-     * Gets the maximum unit load allowed for a faculty member.
-     */
-    public int getFacultyMaxUnits(int facultyId) {
+    /** Maximum unit load of a faculty member (24 if the faculty row is not found). */
+    public int getFacultyMaxUnits(int facultyId) throws SQLException {
         String sql = "SELECT max_units FROM faculty WHERE faculty_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pst = conn.prepareStatement(sql)) {
-
-            pst.setInt(1, facultyId);
-            try (ResultSet rs = pst.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getInt("max_units");
-                }
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, facultyId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt("max_units") : 24;
             }
-        } catch (SQLException e) {
-            System.err.println("Error fetching faculty max units: " + e.getMessage());
         }
-        return 24; // Default fallback
+    }
+
+    // =====================================================================
+    // CONFLICT CHECKS
+    // Two time blocks overlap on the same day when:
+    //     existingStart < newEnd  AND  existingEnd > newStart
+    // =====================================================================
+
+    /** True if the same subject and section is already scheduled at exactly the same day and time. */
+    public boolean existsDuplicate(Schedule s, int excludeId) throws SQLException {
+        String sql = "SELECT schedule_id FROM schedules "
+                   + "WHERE subject_id = ? AND section = ? AND TRIM(term) = TRIM(?) "
+                   + "AND TRIM(day_of_week) = TRIM(?) AND start_time = ? AND end_time = ? "
+                   + "AND schedule_id <> ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, s.getSubjectId());
+            ps.setString(2, s.getSection().trim());
+            ps.setString(3, s.getTerm().trim());
+            ps.setString(4, s.getDayOfWeek().trim());
+            ps.setTime(5, s.getStartTime());
+            ps.setTime(6, s.getEndTime());
+            ps.setInt(7, excludeId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    /** The class the same instructor already teaches at an overlapping time, or null if none. */
+    public ScheduleConflict findFacultyConflict(Schedule s, int excludeId) throws SQLException {
+        if (s.getFacultyId() <= 0) return null;     // unassigned faculty cannot conflict
+        String sql = "SELECT sub.subject_code, s.section, r.room_name, s.start_time, s.end_time, "
+                   + "       f.first_name, f.last_name "
+                   + "FROM schedules s "
+                   + "INNER JOIN faculty f ON s.faculty_id = f.faculty_id "
+                   + "INNER JOIN subjects sub ON s.subject_id = sub.subject_id "
+                   + "INNER JOIN rooms r ON s.room_id = r.room_id "
+                   + "WHERE s.faculty_id = ? AND TRIM(s.term) = TRIM(?) AND TRIM(s.day_of_week) = TRIM(?) "
+                   + "AND s.schedule_id <> ? AND s.start_time < ? AND s.end_time > ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, s.getFacultyId());
+            ps.setString(2, s.getTerm().trim());
+            ps.setString(3, s.getDayOfWeek().trim());
+            ps.setInt(4, excludeId);
+            ps.setTime(5, s.getEndTime());     // existingStart < newEnd
+            ps.setTime(6, s.getStartTime());   // existingEnd > newStart
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return null;
+                return new ScheduleConflict(rs.getString("subject_code"), rs.getString("section"),
+                        rs.getString("room_name"),
+                        rs.getString("first_name") + " " + rs.getString("last_name"),
+                        rs.getTime("start_time"), rs.getTime("end_time"));
+            }
+        }
+    }
+
+    /** The class already using the same room at an overlapping time, or null if none. */
+    public ScheduleConflict findRoomConflict(Schedule s, int excludeId) throws SQLException {
+        String sql = "SELECT sub.subject_code, s.section, r.room_name, s.start_time, s.end_time "
+                   + "FROM schedules s "
+                   + "INNER JOIN rooms r ON s.room_id = r.room_id "
+                   + "INNER JOIN subjects sub ON s.subject_id = sub.subject_id "
+                   + "WHERE s.room_id = ? AND TRIM(s.term) = TRIM(?) AND TRIM(s.day_of_week) = TRIM(?) "
+                   + "AND s.schedule_id <> ? AND s.start_time < ? AND s.end_time > ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, s.getRoomId());
+            ps.setString(2, s.getTerm().trim());
+            ps.setString(3, s.getDayOfWeek().trim());
+            ps.setInt(4, excludeId);
+            ps.setTime(5, s.getEndTime());
+            ps.setTime(6, s.getStartTime());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return null;
+                return new ScheduleConflict(rs.getString("subject_code"), rs.getString("section"),
+                        rs.getString("room_name"), null,
+                        rs.getTime("start_time"), rs.getTime("end_time"));
+            }
+        }
+    }
+
+    /** Another class the same section already has at an overlapping time, or null if none. */
+    public ScheduleConflict findSectionConflict(Schedule s, int excludeId) throws SQLException {
+        String sql = "SELECT sub.subject_code, s.section, r.room_name, s.start_time, s.end_time "
+                   + "FROM schedules s "
+                   + "INNER JOIN subjects sub ON s.subject_id = sub.subject_id "
+                   + "INNER JOIN rooms r ON s.room_id = r.room_id "
+                   + "WHERE LOWER(s.section) = LOWER(?) AND TRIM(s.term) = TRIM(?) "
+                   + "AND TRIM(s.day_of_week) = TRIM(?) "
+                   + "AND s.schedule_id <> ? AND s.start_time < ? AND s.end_time > ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, s.getSection().trim());
+            ps.setString(2, s.getTerm().trim());
+            ps.setString(3, s.getDayOfWeek().trim());
+            ps.setInt(4, excludeId);
+            ps.setTime(5, s.getEndTime());
+            ps.setTime(6, s.getStartTime());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return null;
+                return new ScheduleConflict(rs.getString("subject_code"), rs.getString("section"),
+                        rs.getString("room_name"), null,
+                        rs.getTime("start_time"), rs.getTime("end_time"));
+            }
+        }
     }
 }

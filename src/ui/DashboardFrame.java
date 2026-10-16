@@ -1,20 +1,19 @@
 package ui;
 
-import database.DatabaseConnection;
+import dao.DashboardDAO;
 import model.User;
+import util.DbErrors;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import java.awt.*;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public class DashboardFrame extends JFrame {
 
     private final User currentUser;
+    private final DashboardDAO dashboardDAO = new DashboardDAO();
 
     private final JLabel lblFacultyCount = new JLabel("0", SwingConstants.CENTER);
     private final JLabel lblSubjectCount = new JLabel("0", SwingConstants.CENTER);
@@ -252,23 +251,14 @@ public class DashboardFrame extends JFrame {
     }
 
     private void loadCounts() {
-        lblFacultyCount.setText(String.valueOf(getCount("SELECT COUNT(*) FROM faculty")));
-        lblSubjectCount.setText(String.valueOf(getCount("SELECT COUNT(*) FROM subjects")));
-        lblDepartmentCount.setText(String.valueOf(getCount("SELECT COUNT(*) FROM departments")));
-        lblRoomCount.setText(String.valueOf(getCount("SELECT COUNT(*) FROM rooms")));
-    }
-
-    private int getCount(String sql) {
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            if (rs.next()) {
-                return rs.getInt(1);
-            }
+        try {
+            lblFacultyCount.setText(String.valueOf(dashboardDAO.countFaculty()));
+            lblSubjectCount.setText(String.valueOf(dashboardDAO.countSubjects()));
+            lblDepartmentCount.setText(String.valueOf(dashboardDAO.countDepartments()));
+            lblRoomCount.setText(String.valueOf(dashboardDAO.countRooms()));
         } catch (SQLException e) {
-            util.DbErrors.show(this, "Dashboard Error", e);
+            DbErrors.show(this, "Dashboard Error", e);
         }
-        return 0;
     }
 
     private void logout() {

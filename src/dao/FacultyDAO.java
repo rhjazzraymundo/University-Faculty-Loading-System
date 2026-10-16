@@ -82,6 +82,36 @@ public class FacultyDAO {
     }
 
     // =========================
+    // ACTIVE FACULTY (for dropdown lists)
+    // =========================
+
+    public List<Faculty> getActiveFaculty() throws SQLException {
+
+        List<Faculty> facultyList = new ArrayList<>();
+
+        String sql = "SELECT faculty_id, employee_no, first_name, last_name, max_units "
+                   + "FROM faculty WHERE status = 'Active' "
+                   + "ORDER BY last_name, first_name";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                Faculty faculty = new Faculty();
+                faculty.setFacultyId(rs.getInt("faculty_id"));
+                faculty.setEmployeeNo(rs.getString("employee_no"));
+                faculty.setFirstName(rs.getString("first_name"));
+                faculty.setLastName(rs.getString("last_name"));
+                faculty.setMaxUnits(rs.getInt("max_units"));
+                facultyList.add(faculty);
+            }
+        }
+
+        return facultyList;
+    }
+
+    // =========================
     // SEARCH
     // =========================
 
