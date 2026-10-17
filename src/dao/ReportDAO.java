@@ -9,11 +9,19 @@ import java.sql.SQLException;
 import java.sql.Time;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 /** Read-only queries for the Reports screen. Each row is ready to add to a JTable. */
 public class ReportDAO {
+
+    /**
+     * Hours a room can be used in one week: classes may be scheduled from 7:00 AM to
+     * 9:00 PM (14 hours) on Monday to Saturday (6 days), as allowed by the time lists
+     * in ScheduleFrame. Used as the 100% mark of the Room Utilization report.
+     */
+    public static final double WEEKLY_AVAILABLE_HOURS = 14.0 * 6;
 
     /**
      * Faculty load summary for a term (JOIN of faculty, departments, schedules and subjects).
@@ -114,5 +122,52 @@ public class ReportDAO {
             }
         }
         return rows;
+    }
+
+    /**
+     * Room utilization for a term (LEFT JOIN of rooms and schedules, so rooms with no
+     * class still appear). Every schedule counts, whether or not a faculty is assigned.
+     * Row: room name, building, room type, capacity (Integer),
+     *      classes per week (Integer), booked hours per week (Double)
+     */
+    public List<Object[]> getRoomUtilization(String term) throws SQLException {
+        String sql = "SELECT r.room_id, r.room_name, r.building, r.room_type, r.capacity, "
+                   + "       s.start_time, s.end_time "
+                   + "FROM rooms r "
+                   + "LEFT JOIN schedules s ON r.room_id = s.room_id AND s.term = ? "
+                   + "ORDER BY r.room_name";
+
+        // One entry per room; the schedule rows of a room are added up in Java
+        // (same approach as weeklyHours above, because Derby has no simple time difference).
+        Map<Integer, Object[]> rooms = new LinkedHashMap<>();
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, term);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    int roomId = rs.getInt("room_id");
+                    Object[] row = rooms.get(roomId);
+                    if (row == null) {
+                        String building = rs.getString("building");
+                        row = new Object[]{
+                            rs.getString("room_name"),
+                            building == null ? "" : building,
+                            rs.getString("room_type"),
+                            rs.getInt("capacity"),
+                            0,      // classes per week
+                            0.0     // booked hours per week
+                        };
+                        rooms.put(roomId, row);
+                    }
+                    Time start = rs.getTime("start_time");
+                    Time end = rs.getTime("end_time");
+                    if (start != null && end != null) {   // null when the room has no class
+                        row[4] = (Integer) row[4] + 1;
+                        row[5] = (Double) row[5] + (end.getTime() - start.getTime()) / (1000.0 * 60 * 60);
+                    }
+                }
+            }
+        }
+        return new ArrayList<>(rooms.values());
     }
 }

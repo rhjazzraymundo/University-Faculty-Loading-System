@@ -29,6 +29,10 @@ public class ReportsFrame extends JFrame {
     private DefaultTableModel modelFacultySchedule;
     private List<Integer> facultyIds = new ArrayList<>();
 
+    private JComboBox<String> cmbRoomTerm;
+    private JTable tblRoomUtilization;
+    private DefaultTableModel modelRoomUtilization;
+
     public ReportsFrame() {
         super("System Reports - Faculty Loading");
         setSize(1100, 720);
@@ -41,6 +45,7 @@ public class ReportsFrame extends JFrame {
 
         loadFacultySummaryReport();
         loadFacultyScheduleReport();
+        loadRoomUtilizationReport();
     }
 
     private void buildUI() {
@@ -58,7 +63,7 @@ public class ReportsFrame extends JFrame {
         title.setFont(new Font("Segoe UI", Font.BOLD, 18));
         title.setForeground(Color.WHITE);
 
-        JLabel sub = new JLabel("Official faculty teaching load summaries and instructor timetables");
+        JLabel sub = new JLabel("Official faculty teaching load summaries, instructor timetables and room utilization");
         sub.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         sub.setForeground(Theme.HEADER_SUB);
 
@@ -75,6 +80,7 @@ public class ReportsFrame extends JFrame {
 
         tabbedPane.addTab("  1. Faculty Load Summary  ", createSummaryPanel());
         tabbedPane.addTab("  2. Schedule per Faculty  ", createFacultySchedulePanel());
+        tabbedPane.addTab("  3. Room Utilization  ", createRoomUtilizationPanel());
 
         JPanel tabContainer = new JPanel(new BorderLayout());
         tabContainer.setOpaque(false);
@@ -250,6 +256,90 @@ public class ReportsFrame extends JFrame {
             }
         } catch (SQLException e) {
             DbErrors.show(this, "Error loading faculty timetable", e);
+        }
+    }
+
+    // =========================================================================
+    // REPORT 3: ROOM UTILIZATION
+    // =========================================================================
+    private JPanel createRoomUtilizationPanel() {
+        JPanel panel = new JPanel(new BorderLayout(0, 10));
+        panel.setBackground(Theme.BACKGROUND);
+        panel.setBorder(new EmptyBorder(12, 12, 12, 12));
+
+        // FILTER CARD
+        JPanel filterCard = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 8));
+        filterCard.setBackground(Color.WHITE);
+        filterCard.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(Theme.BORDER, 1),
+                new EmptyBorder(6, 12, 6, 12)
+        ));
+
+        filterCard.add(new JLabel("Academic Term:"));
+        cmbRoomTerm = new JComboBox<>(new String[]{
+            "2026-2027 1st Sem", "2026-2027 2nd Sem", "Summer"
+        });
+        filterCard.add(cmbRoomTerm);
+
+        JButton btnRoomReport = createBtn("Generate Report", Theme.PRIMARY, 140);
+        filterCard.add(btnRoomReport);
+
+        JLabel note = new JLabel("Utilization = booked hours / "
+                + (int) ReportDAO.WEEKLY_AVAILABLE_HOURS + " available hours per week (7:00 AM - 9:00 PM, Mon-Sat)");
+        note.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        note.setForeground(Theme.MUTED);
+        filterCard.add(note);
+
+        panel.add(filterCard, BorderLayout.NORTH);
+
+        // TABLE CARD
+        JPanel tableCard = new JPanel(new BorderLayout());
+        tableCard.setBackground(Color.WHITE);
+        tableCard.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(Theme.BORDER, 1),
+                new EmptyBorder(10, 12, 10, 12)
+        ));
+
+        modelRoomUtilization = new DefaultTableModel(
+                new Object[]{
+                    "Room", "Building", "Type", "Capacity",
+                    "Classes / Week", "Booked Hours", "Utilization"
+                }, 0
+        ) {
+            @Override
+            public boolean isCellEditable(int r, int c) { return false; }
+        };
+
+        tblRoomUtilization = new JTable(modelRoomUtilization);
+        tblRoomUtilization.setRowHeight(26);
+        Theme.styleTable(tblRoomUtilization);
+
+        tableCard.add(new JScrollPane(tblRoomUtilization), BorderLayout.CENTER);
+        panel.add(tableCard, BorderLayout.CENTER);
+
+        btnRoomReport.addActionListener(e -> loadRoomUtilizationReport());
+        cmbRoomTerm.addActionListener(e -> loadRoomUtilizationReport());
+
+        return panel;
+    }
+
+    private void loadRoomUtilizationReport() {
+        modelRoomUtilization.setRowCount(0);
+        String term = (String) cmbRoomTerm.getSelectedItem();
+
+        try {
+            for (Object[] r : reportDAO.getRoomUtilization(term)) {
+                double hours = (Double) r[5];
+                double percent = hours / ReportDAO.WEEKLY_AVAILABLE_HOURS * 100.0;
+
+                modelRoomUtilization.addRow(new Object[]{
+                    r[0], r[1], r[2], r[3], r[4],
+                    String.format("%.1f hrs", hours),
+                    String.format("%.1f%%", percent)
+                });
+            }
+        } catch (SQLException e) {
+            DbErrors.show(this, "Error generating room utilization", e);
         }
     }
 
