@@ -85,7 +85,7 @@ public class DashboardFrame extends JFrame {
         cardsRow.setOpaque(false);
         cardsRow.setPreferredSize(new Dimension(900, 110)); // Prevents stretching!
 
-        cardsRow.add(createStatCard("FACULTY", lblFacultyCount, "Active Instructors", Theme.CARD_1));
+        cardsRow.add(createStatCard("FACULTY", lblFacultyCount, "Instructors", Theme.CARD_1));
         cardsRow.add(createStatCard("SUBJECTS", lblSubjectCount, "Curriculum Courses", Theme.CARD_2));
         cardsRow.add(createStatCard("DEPARTMENTS", lblDepartmentCount, "Academic Units", Theme.CARD_3));
         cardsRow.add(createStatCard("ROOMS", lblRoomCount, "Lecture & Lab Rooms", Theme.CARD_4));
