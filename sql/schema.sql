@@ -103,45 +103,38 @@ INSERT INTO users (username, password, full_name, role, status) VALUES
     ('olduser', 'old123', 'Inactive Account', 'Staff', 'Inactive');
 
 INSERT INTO departments (department_code, department_name) VALUES
-    ('DIT',  'Department of Information Technology'),
-    ('DCS',  'Department of Computer Science'),
-    ('DMATH', 'Department of Mathematics'),
-    ('DENG', 'Department of English'),
-    ('DPE',  'Department of Physical Education'),
-    ('DBA',  'Department of Business Administration'),
-    ('DEDU', 'Department of Education'),
-    ('DSCI', 'Department of Natural Sciences'),
-    ('DSOC', 'Department of Social Sciences'),
-    ('DENGR','Department of Engineering');
+    ('COE', 'College of Engineering'),
+    ('CET', 'College of Engineering Technology'),
+    ('CES', 'College of Education and Science');
 
 INSERT INTO faculty (employee_no, first_name, last_name, department_id, email, contact_no, employment_type, max_units, status) VALUES
-    ('EMP-001', 'Maria',  'Santos',    1, 'maria.santos@university.edu',  '09171234501', 'Full-time', 24, 'Active'),
-    ('EMP-002', 'Jose',   'Reyes',     1, 'jose.reyes@university.edu',    '09171234502', 'Full-time', 24, 'Active'),
-    ('EMP-003', 'Ana',    'Cruz',      2, 'ana.cruz@university.edu',      '09171234503', 'Full-time', 24, 'Active'),
-    ('EMP-004', 'Pedro',  'Garcia',    2, 'pedro.garcia@university.edu',  '09171234504', 'Part-time', 12, 'Active'),
-    ('EMP-005', 'Lia',    'Mendoza',   3, 'lia.mendoza@university.edu',   '09171234505', 'Full-time', 24, 'Active'),
-    ('EMP-006', 'Carlos', 'Dela Cruz', 4, 'carlos.delacruz@university.edu','09171234506', 'Full-time', 24, 'Active'),
-    ('EMP-007', 'Elena',  'Ramos',     5, 'elena.ramos@university.edu',   '09171234507', 'Part-time', 12, 'Active'),
-    ('EMP-008', 'Ramon',  'Aquino',    1, 'ramon.aquino@university.edu',  '09171234508', 'Full-time', 24, 'Inactive'),
-    ('EMP-009', 'Grace',  'Villanueva',6, 'grace.villanueva@university.edu','09171234509', 'Full-time', 24, 'Active'),
-    ('EMP-010', 'Miguel', 'Torres',    7, 'miguel.torres@university.edu',  '09171234510', 'Full-time', 24, 'Active'),
-    ('EMP-011', 'Sofia',  'Bautista',  8, 'sofia.bautista@university.edu', '09171234511', 'Part-time', 12, 'Active'),
-    ('EMP-012', 'Daniel', 'Navarro',   9, 'daniel.navarro@university.edu', '09171234512', 'Full-time', 24, 'Active'),
-    ('EMP-013', 'Isabel', 'Castillo', 10, 'isabel.castillo@university.edu','09171234513', 'Full-time', 24, 'Active');
+    ('EMP-001', 'Maria',  'Santos',     2, 'maria.santos@university.edu',  '09171234501', 'Full-time', 24, 'Active'),
+    ('EMP-002', 'Jose',   'Reyes',      2, 'jose.reyes@university.edu',    '09171234502', 'Full-time', 24, 'Active'),
+    ('EMP-003', 'Ana',    'Cruz',       2, 'ana.cruz@university.edu',      '09171234503', 'Full-time', 24, 'Active'),
+    ('EMP-004', 'Pedro',  'Garcia',     2, 'pedro.garcia@university.edu',  '09171234504', 'Part-time', 12, 'Active'),
+    ('EMP-005', 'Lia',    'Mendoza',    3, 'lia.mendoza@university.edu',   '09171234505', 'Full-time', 24, 'Active'),
+    ('EMP-006', 'Carlos', 'Dela Cruz',  3, 'carlos.delacruz@university.edu','09171234506', 'Full-time', 24, 'Active'),
+    ('EMP-007', 'Elena',  'Ramos',      3, 'elena.ramos@university.edu',   '09171234507', 'Part-time', 12, 'Active'),
+    ('EMP-008', 'Ramon',  'Aquino',     2, 'ramon.aquino@university.edu',  '09171234508', 'Full-time', 24, 'Inactive'),
+    ('EMP-009', 'Grace',  'Villanueva', 3, 'grace.villanueva@university.edu','09171234509', 'Full-time', 24, 'Active'),
+    ('EMP-010', 'Miguel', 'Torres',     3, 'miguel.torres@university.edu',  '09171234510', 'Full-time', 24, 'Active'),
+    ('EMP-011', 'Sofia',  'Bautista',   3, 'sofia.bautista@university.edu', '09171234511', 'Part-time', 12, 'Active'),
+    ('EMP-012', 'Daniel', 'Navarro',    3, 'daniel.navarro@university.edu', '09171234512', 'Full-time', 24, 'Active'),
+    ('EMP-013', 'Isabel', 'Castillo',  1, 'isabel.castillo@university.edu','09171234513', 'Full-time', 24, 'Active');
 
 INSERT INTO subjects (subject_code, subject_title, units, department_id) VALUES
-    ('IT101',   'Introduction to Computing',        3, 1),
-    ('IT102',   'Computer Programming 1',           3, 1),
-    ('IT201',   'Database Management Systems',      3, 1),
-    ('IT202',   'Computer Networking',              3, 1),
+    ('IT101',   'Introduction to Computing',        3, 2),
+    ('IT102',   'Computer Programming 1',           3, 2),
+    ('IT201',   'Database Management Systems',      3, 2),
+    ('IT202',   'Computer Networking',              3, 2),
     ('CS101',   'Discrete Structures',              3, 2),
     ('CS201',   'Data Structures and Algorithms',   4, 2),
     ('MATH101', 'College Algebra',                  3, 3),
-    ('ENG101',  'Purposive Communication',          3, 4),
-    ('PE101',   'Physical Fitness',                 2, 5),
-    ('IT301',   'Systems Analysis and Design',      3, 1),
-    ('BA101',   'Principles of Management',         3, 6),
-    ('EDU101',  'The Teaching Profession',          3, 7);
+    ('ENG101',  'Purposive Communication',          3, 3),
+    ('PE101',   'Physical Fitness',                 2, 3),
+    ('IT301',   'Systems Analysis and Design',      3, 2),
+    ('BA101',   'Principles of Management',         3, 3),
+    ('EDU101',  'The Teaching Profession',          3, 3);
 
 INSERT INTO rooms (room_name, building, capacity, room_type) VALUES
     ('Room 101', 'Main Building',  40, 'Lecture'),
