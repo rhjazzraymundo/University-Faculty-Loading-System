@@ -10,7 +10,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Database operations for the SUBJECTS table. Every method throws SQLException so the UI can show it. */
 public class SubjectDAO {
 
     // CREATE

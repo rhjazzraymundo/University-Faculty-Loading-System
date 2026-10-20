@@ -8,13 +8,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-/** Database operations for the USERS table (used by the login screen). */
 public class UserDAO {
 
-    /**
-     * Checks the username and password against the USERS table.
-     * @return the matching Active user, or null if the username/password is wrong or the account is Inactive
-     */
+
     public User authenticate(String username, String password) throws SQLException {
         String sql = "SELECT user_id, username, password, full_name, role, status "
                    + "FROM users WHERE username = ? AND password = ? AND status = 'Active'";

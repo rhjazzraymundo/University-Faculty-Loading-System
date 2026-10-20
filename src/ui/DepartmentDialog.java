@@ -13,7 +13,6 @@ import java.awt.*;
 import java.sql.SQLException;
 import java.util.List;
 
-/** Department management: add, view, search, update, delete (admin only). */
 public class DepartmentDialog extends JDialog {
 
     private final DepartmentDAO departmentDAO = new DepartmentDAO();

@@ -1,8 +1,6 @@
 package model;
 
-/**
- * Model class for FACULTY.
- */
+
 public class Faculty {
 
     private int facultyId;

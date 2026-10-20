@@ -8,15 +8,12 @@ import java.awt.*;
 
 /**
  * Central color palette for the whole system.
- * Change a color here and every screen updates.
- *
- * Palette:  #FAF1EC  #E4CEC2  #905F66  #4E0911  #260707
  */
 public final class Theme {
 
     private Theme() {}
 
-    // ----- Core palette (from the design picture) -----
+    // ----- Core palette -----
     public static final Color CREAM    = new Color(0xFA, 0xF1, 0xEC); // #FAF1EC
     public static final Color BLUSH    = new Color(0xE4, 0xCE, 0xC2); // #E4CEC2
     public static final Color MAUVE    = new Color(0x90, 0x5F, 0x66); // #905F66
@@ -35,7 +32,7 @@ public final class Theme {
     public static final Color MUTED      = MAUVE;     // secondary text
     public static final Color CARD       = Color.WHITE;
 
-    // Blend of burgundy and mauve (secondary buttons, 4th dashboard card)
+    // (secondary buttons, 4th dashboard card)
     public static final Color SECONDARY  = new Color(111, 52, 60);
     // Faded mauve for disabled items
     public static final Color DISABLED   = new Color(176, 140, 146);
@@ -46,7 +43,7 @@ public final class Theme {
     public static final Color CARD_3 = ESPRESSO;
     public static final Color CARD_4 = SECONDARY;
 
-    // ----- Status colors (kept readable on purpose: red / amber / green) -----
+    // ----- Status colors  -----
     public static final Color STATUS_OVER = new Color(220, 38, 38);
     public static final Color STATUS_WARN = new Color(217, 119, 6);
     public static final Color STATUS_OK   = new Color(22, 101, 52);

@@ -13,7 +13,6 @@ import java.awt.*;
 import java.sql.SQLException;
 import java.util.List;
 
-/** Room management: add, view, search, update, delete (admin only). */
 public class RoomDialog extends JDialog {
 
     private final RoomDAO roomDAO = new RoomDAO();

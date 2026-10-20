@@ -7,7 +7,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-/** Record counts shown on the dashboard cards. */
 public class DashboardDAO {
 
     public int countFaculty() throws SQLException {

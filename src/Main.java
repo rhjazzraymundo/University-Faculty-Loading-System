@@ -7,7 +7,6 @@ import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
-/** Entry point: tests the Derby connection, then opens the login screen. */
 public class Main {
     public static void main(String[] args) {
         try {

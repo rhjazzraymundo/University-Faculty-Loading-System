@@ -246,7 +246,6 @@ public class ScheduleFrame extends JFrame {
                 lblFacultyLoad.setForeground(Theme.STATUS_OK);
             }
         } catch (SQLException e) {
-            // shown in the label (not a pop-up) because this runs every time a dropdown changes
             lblFacultyLoad.setText("Cannot load faculty load: database error");
             lblFacultyLoad.setForeground(Theme.STATUS_OVER);
         }

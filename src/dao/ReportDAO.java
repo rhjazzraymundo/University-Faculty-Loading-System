@@ -13,7 +13,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Read-only queries for the Reports screen. Each row is ready to add to a JTable. */
 public class ReportDAO {
 
     /**
@@ -23,11 +22,7 @@ public class ReportDAO {
      */
     public static final double WEEKLY_AVAILABLE_HOURS = 14.0 * 6;
 
-    /**
-     * Faculty load summary for a term (JOIN of faculty, departments, schedules and subjects).
-     * Row: employee no, name, department code, employment type,
-     *      assigned units (Integer), max units (Integer), weekly hours (Double)
-     */
+
     public List<Object[]> getFacultyLoadSummary(String term) throws SQLException {
         String sql = "SELECT f.faculty_id, f.employee_no, f.first_name, f.last_name, "
                    + "       d.department_code, f.employment_type, f.max_units, "
@@ -66,7 +61,6 @@ public class ReportDAO {
         return rows;
     }
 
-    /** Total weekly hours per faculty id for a term. */
     private Map<Integer, Double> weeklyHours(Connection conn, String term) throws SQLException {
         String sql = "SELECT faculty_id, start_time, end_time FROM schedules "
                    + "WHERE term = ? AND faculty_id IS NOT NULL";
@@ -87,10 +81,7 @@ public class ReportDAO {
         return hours;
     }
 
-    /**
-     * Weekly timetable of one instructor for a term (JOIN of schedules, subjects and rooms).
-     * Row: day, time slot, subject code, subject title, units, section, room
-     */
+    
     public List<Object[]> getFacultyTimetable(int facultyId, String term) throws SQLException {
         String sql = "SELECT s.day_of_week, s.start_time, s.end_time, "
                    + "       sub.subject_code, sub.subject_title, sub.units, s.section, r.room_name "
@@ -126,9 +117,7 @@ public class ReportDAO {
 
     /**
      * Room utilization for a term (LEFT JOIN of rooms and schedules, so rooms with no
-     * class still appear). Every schedule counts, whether or not a faculty is assigned.
-     * Row: room name, building, room type, capacity (Integer),
-     *      classes per week (Integer), booked hours per week (Double)
+     * class still appear).
      */
     public List<Object[]> getRoomUtilization(String term) throws SQLException {
         String sql = "SELECT r.room_id, r.room_name, r.building, r.room_type, r.capacity, "

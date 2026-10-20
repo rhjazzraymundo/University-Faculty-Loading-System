@@ -10,7 +10,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Database operations for the DEPARTMENTS table. Every method throws SQLException so the UI can show it. */
+/** Every method throws SQLException so the UI can show it. */
 public class DepartmentDAO {
 
     // READ
@@ -26,7 +26,7 @@ public class DepartmentDAO {
         return list;
     }
 
-    // SEARCH (code or name)
+    // SEARCH 
     public List<Department> searchDepartments(String keyword) throws SQLException {
         String sql = "SELECT department_id, department_code, department_name FROM departments "
                    + "WHERE UPPER(department_code) LIKE ? OR UPPER(department_name) LIKE ? "
@@ -68,7 +68,7 @@ public class DepartmentDAO {
         }
     }
 
-    // DELETE (fails with SQLState 23503 if faculty or subjects use the department)
+    // DELETE 
     public boolean deleteDepartment(int departmentId) throws SQLException {
         String sql = "DELETE FROM departments WHERE department_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();

@@ -19,10 +19,7 @@ public class ConflictChecker {
 
     private static final ScheduleDAO scheduleDAO = new ScheduleDAO();
 
-    /**
-     * @return true if the schedule must NOT be saved (a conflict was found and shown,
-     *         or the check could not run because of a database error)
-     */
+    
     public static boolean hasConflict(Component parent, Schedule schedule, int excludeScheduleId) {
         try {
             // 1. Exact duplicate

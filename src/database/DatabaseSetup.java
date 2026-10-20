@@ -10,11 +10,6 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * One-click database builder. Run this file (Right-click > Run File) once after
- * starting the Derby Network Server. It runs sql/schema.sql: creates the tables
- * and loads the sample data. Running it again resets the data.
- */
 public class DatabaseSetup {
 
     public static void main(String[] args) {
@@ -49,7 +44,6 @@ public class DatabaseSetup {
         }
     }
 
-    /** Splits the script on semicolons and ignores -- comment lines. */
     private static List<String> readStatements(String path) throws IOException {
         List<String> result = new ArrayList<>();
         StringBuilder current = new StringBuilder();

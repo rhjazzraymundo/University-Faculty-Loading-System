@@ -10,7 +10,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Database operations for the ROOMS table. Every method throws SQLException so the UI can show it. */
 public class RoomDAO {
 
     private static final String COLUMNS = "room_id, room_name, building, capacity, room_type";
@@ -40,7 +39,7 @@ public class RoomDAO {
         return list;
     }
 
-    // SEARCH (room name, building or type)
+    // SEARCH
     public List<Room> searchRooms(String keyword) throws SQLException {
         String sql = "SELECT " + COLUMNS + " FROM rooms "
                    + "WHERE UPPER(room_name) LIKE ? OR UPPER(building) LIKE ? OR UPPER(room_type) LIKE ? "
@@ -74,7 +73,7 @@ public class RoomDAO {
         }
     }
 
-    // DELETE (fails with SQLState 23503 if the room is used by a schedule)
+    // DELETE 
     public boolean deleteRoom(int roomId) throws SQLException {
         String sql = "DELETE FROM rooms WHERE room_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();

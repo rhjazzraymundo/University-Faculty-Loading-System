@@ -4,10 +4,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
-/**
- * Single place for JDBC connection settings (see requirement sections 17-18).
- * Day 2: run the Derby Network Server first, then test with Main.
- */
+
 public class DatabaseConnection {
 
     private static final String URL =

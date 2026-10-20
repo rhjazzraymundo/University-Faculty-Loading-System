@@ -13,11 +13,7 @@ import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Database operations for the SCHEDULES table: CRUD, load calculations and conflict checks.
- * Every method throws SQLException so the screen can show a clear message
- * (nothing is hidden or silently turned into 0 / false).
- */
+
 public class ScheduleDAO {
 
     /** Sorts days Monday to Saturday instead of alphabetically. */
@@ -31,9 +27,7 @@ public class ScheduleDAO {
         else ps.setInt(index, facultyId);
     }
 
-    // =====================================================================
     // CREATE
-    // =====================================================================
     public boolean addSchedule(Schedule schedule) throws SQLException {
         String sql = "INSERT INTO schedules "
                    + "(subject_id, faculty_id, room_id, section, term, day_of_week, start_time, end_time) "
@@ -52,12 +46,7 @@ public class ScheduleDAO {
         }
     }
 
-    // =====================================================================
-    // READ / SEARCH  (JOIN of schedules, subjects, faculty and rooms)
-    // Each row matches the columns of the Schedules table:
-    // id, subject code, units, faculty name, room, section, term, day, start, end
-    // keyword = null or empty returns everything.
-    // =====================================================================
+    // READ / SEARCH 
     public List<Object[]> getScheduleRows(String keyword) throws SQLException {
         boolean all = keyword == null || keyword.trim().isEmpty();
         String sql = "SELECT s.schedule_id, s.section, s.term, s.day_of_week, s.start_time, s.end_time, "
@@ -116,9 +105,7 @@ public class ScheduleDAO {
         }
     }
 
-    // =====================================================================
     // DELETE
-    // =====================================================================
     public boolean deleteSchedule(int scheduleId) throws SQLException {
         String sql = "DELETE FROM schedules WHERE schedule_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -128,11 +115,7 @@ public class ScheduleDAO {
         }
     }
 
-    // =====================================================================
     // TEACHING LOAD CALCULATIONS
-    // excludeScheduleId is used when updating so the record being edited is not
-    // counted twice (pass -1 when adding).
-    // =====================================================================
     public int getTotalAssignedUnits(int facultyId, String term, int excludeScheduleId) throws SQLException {
         String sql = "SELECT COALESCE(SUM(sub.units), 0) AS total_units "
                    + "FROM schedules s "
@@ -194,13 +177,7 @@ public class ScheduleDAO {
         }
     }
 
-    // =====================================================================
     // CONFLICT CHECKS
-    // Two time blocks overlap on the same day when:
-    //     existingStart < newEnd  AND  existingEnd > newStart
-    // =====================================================================
-
-    /** True if the same subject and section is already scheduled at exactly the same day and time. */
     public boolean existsDuplicate(Schedule s, int excludeId) throws SQLException {
         String sql = "SELECT schedule_id FROM schedules "
                    + "WHERE subject_id = ? AND section = ? AND TRIM(term) = TRIM(?) "
@@ -221,7 +198,6 @@ public class ScheduleDAO {
         }
     }
 
-    /** The class the same instructor already teaches at an overlapping time, or null if none. */
     public ScheduleConflict findFacultyConflict(Schedule s, int excludeId) throws SQLException {
         if (s.getFacultyId() <= 0) return null;     // unassigned faculty cannot conflict
         String sql = "SELECT sub.subject_code, s.section, r.room_name, s.start_time, s.end_time, "
@@ -250,7 +226,6 @@ public class ScheduleDAO {
         }
     }
 
-    /** The class already using the same room at an overlapping time, or null if none. */
     public ScheduleConflict findRoomConflict(Schedule s, int excludeId) throws SQLException {
         String sql = "SELECT sub.subject_code, s.section, r.room_name, s.start_time, s.end_time "
                    + "FROM schedules s "
@@ -275,7 +250,6 @@ public class ScheduleDAO {
         }
     }
 
-    /** Another class the same section already has at an overlapping time, or null if none. */
     public ScheduleConflict findSectionConflict(Schedule s, int excludeId) throws SQLException {
         String sql = "SELECT sub.subject_code, s.section, r.room_name, s.start_time, s.end_time "
                    + "FROM schedules s "

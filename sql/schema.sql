@@ -160,4 +160,8 @@ INSERT INTO schedules (subject_id, faculty_id, room_id, section, term, day_of_we
     (8,  6,    4, 'BSIT-1A', '2026-2027 1st Sem', 'Thursday',  '08:00:00', '09:30:00'),
     (9,  7,    7, 'BSIT-1A', '2026-2027 1st Sem', 'Saturday',  '08:00:00', '10:00:00'),
     (10, NULL, 1, 'BSIT-3A', '2026-2027 1st Sem', 'Tuesday',   '13:00:00', '14:30:00'),
-    (3,  NULL, 6, 'BSIT-2B', '2026-2027 1st Sem', 'Friday',    '13:00:00', '16:00:00');
+        (3,  NULL, 6, 'BSIT-2B', '2026-2027 1st Sem', 'Friday',    '13:00:00', '16:00:00'),
+    (5,  4,    8, 'BSCS-1B', '2026-2027 1st Sem', 'Monday',    '08:00:00', '09:30:00'),
+    (4,  4,   10, 'BSIT-2B', '2026-2027 1st Sem', 'Tuesday',   '14:00:00', '15:30:00'),
+    (2,  4,    8, 'BSIT-1B', '2026-2027 1st Sem', 'Wednesday', '08:00:00', '09:30:00'),
+    (8,  4,    8, 'BSIT-1B', '2026-2027 1st Sem', 'Friday',    '08:00:00', '09:30:00');

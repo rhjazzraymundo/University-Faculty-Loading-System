@@ -50,11 +50,9 @@ public class ReportsFrame extends JFrame {
 
     private void buildUI() {
         JPanel root = new JPanel(new BorderLayout(0, 0));
-        root.setBackground(Theme.BACKGROUND); // Unified slate background
+        root.setBackground(Theme.BACKGROUND);
 
-        // =====================================================================
-        // 1. UNIFIED HEADER BANNER (Identical to Faculty, Subject, Schedule)
-        // =====================================================================
+        // 1. UNIFIED HEADER BANNER 
         JPanel header = new JPanel(new BorderLayout());
         header.setBackground(Theme.HEADER); // University Navy
         header.setBorder(new EmptyBorder(14, 20, 14, 20));
@@ -71,9 +69,7 @@ public class ReportsFrame extends JFrame {
         header.add(sub, BorderLayout.SOUTH);
         root.add(header, BorderLayout.NORTH);
 
-        // =====================================================================
         // 2. TABBED PANE (Wrapped with generous consistent padding)
-        // =====================================================================
         JTabbedPane tabbedPane = new JTabbedPane();
         tabbedPane.setFont(new Font("Segoe UI", Font.BOLD, 13));
         tabbedPane.setBackground(Color.WHITE);
@@ -91,9 +87,7 @@ public class ReportsFrame extends JFrame {
         setContentPane(root);
     }
 
-    // =========================================================================
     // REPORT 1: FACULTY LOAD SUMMARY
-    // =========================================================================
     private JPanel createSummaryPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 10));
         panel.setBackground(Theme.BACKGROUND);
@@ -180,9 +174,7 @@ public class ReportsFrame extends JFrame {
         }
     }
 
-    // =========================================================================
     // REPORT 2: SCHEDULE PER FACULTY
-    // =========================================================================
     private JPanel createFacultySchedulePanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 10));
         panel.setBackground(Theme.BACKGROUND);
@@ -259,9 +251,7 @@ public class ReportsFrame extends JFrame {
         }
     }
 
-    // =========================================================================
     // REPORT 3: ROOM UTILIZATION
-    // =========================================================================
     private JPanel createRoomUtilizationPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 10));
         panel.setBackground(Theme.BACKGROUND);
@@ -343,9 +333,7 @@ public class ReportsFrame extends JFrame {
         }
     }
 
-    // =========================================================================
     // BUTTON HELPER
-    // =========================================================================
     private JButton createBtn(String text, Color bg, int width) {
         JButton btn = new JButton(text);
         btn.setUI(new javax.swing.plaf.basic.BasicButtonUI());

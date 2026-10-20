@@ -19,7 +19,6 @@ public final class DbErrors {
         return message(e, null);
     }
 
-    /** @param fkHint optional message for foreign-key errors, e.g. "This room is used in a schedule." */
     public static String message(SQLException e, String fkHint) {
         String state = e.getSQLState() == null ? "" : e.getSQLState();
 

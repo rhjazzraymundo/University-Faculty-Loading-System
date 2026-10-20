@@ -1,13 +1,13 @@
 package model;
 
-/** Maps to table USERS. */
+
 public class User {
     private int userId;
     private String username;
     private String password;
     private String fullName;
-    private String role;     // Admin or Staff
-    private String status;   // Active or Inactive
+    private String role;  
+    private String status;  
 
     public User() { }
 
