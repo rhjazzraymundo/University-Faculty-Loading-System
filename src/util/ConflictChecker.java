@@ -8,13 +8,7 @@ import javax.swing.JOptionPane;
 import java.awt.Component;
 import java.sql.SQLException;
 
-/**
- * Checks a schedule against the rules (duplicate, faculty, room and section conflicts)
- * and shows the warning. The database queries are in ScheduleDAO.
- *
- * Timeline conflict rule - two time blocks overlap on the same day when:
- *     existingStart < newEnd  AND  existingEnd > newStart
- */
+
 public class ConflictChecker {
 
     private static final ScheduleDAO scheduleDAO = new ScheduleDAO();
@@ -76,7 +70,6 @@ public class ConflictChecker {
                 return true;
             }
         } catch (SQLException e) {
-            // If a check cannot run, block the save so a conflict is never missed silently.
             JOptionPane.showMessageDialog(parent,
                     "Could not verify the schedule because of a database error.\n"
                     + "The schedule was NOT saved.\n\n" + DbErrors.message(e),

@@ -31,7 +31,6 @@ public class LoginFrame extends JFrame {
         JPanel root = new JPanel(new BorderLayout());
         root.setBackground(Theme.BACKGROUND);
 
-        // Header Banner
         JPanel header = new JPanel(new GridLayout(2, 1, 2, 2));
         header.setBackground(Theme.HEADER);
         header.setBorder(new EmptyBorder(18, 25, 18, 25));
@@ -48,7 +47,6 @@ public class LoginFrame extends JFrame {
         header.add(lblSub);
         root.add(header, BorderLayout.NORTH);
 
-        // Login Card
         JPanel card = new JPanel(new GridBagLayout());
         card.setOpaque(false);
         card.setBorder(new EmptyBorder(25, 30, 20, 30));
@@ -78,7 +76,6 @@ public class LoginFrame extends JFrame {
         c.gridx = 1;
         card.add(txtPassword, c);
 
-        // Buttons
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0));
         buttonPanel.setOpaque(false);
 

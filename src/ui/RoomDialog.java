@@ -38,7 +38,6 @@ public class RoomDialog extends JDialog {
         JPanel root = new JPanel(new BorderLayout(0, 10));
         root.setBackground(Theme.BACKGROUND);
 
-        // HEADER
         JPanel header = new JPanel(new BorderLayout());
         header.setBackground(Theme.HEADER);
         header.setBorder(new EmptyBorder(12, 18, 12, 18));
@@ -48,7 +47,6 @@ public class RoomDialog extends JDialog {
         header.add(title, BorderLayout.CENTER);
         root.add(header, BorderLayout.NORTH);
 
-        // BODY
         JPanel body = new JPanel(new BorderLayout(0, 10));
         body.setOpaque(false);
         body.setBorder(new EmptyBorder(10, 16, 12, 16));
@@ -139,7 +137,6 @@ public class RoomDialog extends JDialog {
         return btn;
     }
 
-    // ---------------------------------------------------------------- data
     private void loadRooms() {
         try {
             display(roomDAO.getAllRooms());
@@ -183,7 +180,6 @@ public class RoomDialog extends JDialog {
         cmbType.setSelectedItem(tableModel.getValueAt(row, 4).toString());
     }
 
-    // ------------------------------------------------------------- actions
     private Room readForm() {
         String name = txtName.getText().trim();
         String capStr = txtCapacity.getText().trim();

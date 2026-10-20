@@ -12,7 +12,6 @@ import java.util.List;
 
 public class FacultyDAO {
 
-    // CREATE
 
     public boolean addFaculty(Faculty faculty) throws SQLException {
 
@@ -39,7 +38,6 @@ public class FacultyDAO {
     }
 
 
-    // READ
     public List<Faculty> getAllFaculty() throws SQLException {
 
         List<Faculty> facultyList = new ArrayList<>();
@@ -77,7 +75,6 @@ public class FacultyDAO {
         return facultyList;
     }
 
-    // ACTIVE FACULTY (for dropdown lists)
     public List<Faculty> getActiveFaculty() throws SQLException {
 
         List<Faculty> facultyList = new ArrayList<>();
@@ -103,10 +100,6 @@ public class FacultyDAO {
 
         return facultyList;
     }
-
-    // =========================
-    // SEARCH
-    // =========================
 
     public List<Faculty> searchFaculty(String keyword)
             throws SQLException {
@@ -177,7 +170,6 @@ public class FacultyDAO {
         return facultyList;
     }
 
-    // UPDATE
     public boolean updateFaculty(Faculty faculty)
             throws SQLException {
 
@@ -211,7 +203,6 @@ public class FacultyDAO {
         }
     }
 
-    // DELETE
 
     public boolean deleteFaculty(int facultyId)
             throws SQLException {

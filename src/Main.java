@@ -13,7 +13,7 @@ public class Main {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
             ui.Theme.install();
         } catch (Exception ignored) {
-            // fall back to the default look and feel
+
         }
 
         try (Connection c = DatabaseConnection.getConnection()) {

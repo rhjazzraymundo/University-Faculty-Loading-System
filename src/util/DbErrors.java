@@ -5,8 +5,7 @@ import java.sql.SQLException;
 import javax.swing.JOptionPane;
 
 /**
- * Turns raw Derby SQLExceptions into messages a user can understand
- * (requirement section 31). Derby reports every error with a SQLState code:
+ * SQLState code:
  *   23505 = duplicate value (UNIQUE constraint)
  *   23503 = linked record (FOREIGN KEY constraint)
  *   08xxx = cannot connect to the database

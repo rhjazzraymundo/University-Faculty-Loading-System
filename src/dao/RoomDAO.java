@@ -14,7 +14,6 @@ public class RoomDAO {
 
     private static final String COLUMNS = "room_id, room_name, building, capacity, room_type";
 
-    // CREATE
     public boolean addRoom(Room room) throws SQLException {
         String sql = "INSERT INTO rooms (room_name, building, capacity, room_type) VALUES (?, ?, ?, ?)";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -27,7 +26,6 @@ public class RoomDAO {
         }
     }
 
-    // READ
     public List<Room> getAllRooms() throws SQLException {
         String sql = "SELECT " + COLUMNS + " FROM rooms ORDER BY room_name";
         List<Room> list = new ArrayList<>();
@@ -39,7 +37,6 @@ public class RoomDAO {
         return list;
     }
 
-    // SEARCH
     public List<Room> searchRooms(String keyword) throws SQLException {
         String sql = "SELECT " + COLUMNS + " FROM rooms "
                    + "WHERE UPPER(room_name) LIKE ? OR UPPER(building) LIKE ? OR UPPER(room_type) LIKE ? "
@@ -58,7 +55,6 @@ public class RoomDAO {
         return list;
     }
 
-    // UPDATE
     public boolean updateRoom(Room room) throws SQLException {
         String sql = "UPDATE rooms SET room_name = ?, building = ?, capacity = ?, room_type = ? "
                    + "WHERE room_id = ?";
@@ -73,7 +69,6 @@ public class RoomDAO {
         }
     }
 
-    // DELETE 
     public boolean deleteRoom(int roomId) throws SQLException {
         String sql = "DELETE FROM rooms WHERE room_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();

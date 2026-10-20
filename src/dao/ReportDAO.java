@@ -15,11 +15,7 @@ import java.util.Map;
 
 public class ReportDAO {
 
-    /**
-     * Hours a room can be used in one week: classes may be scheduled from 7:00 AM to
-     * 9:00 PM (14 hours) on Monday to Saturday (6 days), as allowed by the time lists
-     * in ScheduleFrame. Used as the 100% mark of the Room Utilization report.
-     */
+
     public static final double WEEKLY_AVAILABLE_HOURS = 14.0 * 6;
 
 
@@ -115,10 +111,7 @@ public class ReportDAO {
         return rows;
     }
 
-    /**
-     * Room utilization for a term (LEFT JOIN of rooms and schedules, so rooms with no
-     * class still appear).
-     */
+
     public List<Object[]> getRoomUtilization(String term) throws SQLException {
         String sql = "SELECT r.room_id, r.room_name, r.building, r.room_type, r.capacity, "
                    + "       s.start_time, s.end_time "
@@ -126,8 +119,7 @@ public class ReportDAO {
                    + "LEFT JOIN schedules s ON r.room_id = s.room_id AND s.term = ? "
                    + "ORDER BY r.room_name";
 
-        // One entry per room; the schedule rows of a room are added up in Java
-        // (same approach as weeklyHours above, because Derby has no simple time difference).
+       
         Map<Integer, Object[]> rooms = new LinkedHashMap<>();
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -150,7 +142,7 @@ public class ReportDAO {
                     }
                     Time start = rs.getTime("start_time");
                     Time end = rs.getTime("end_time");
-                    if (start != null && end != null) {   // null when the room has no class
+                    if (start != null && end != null) {  
                         row[4] = (Integer) row[4] + 1;
                         row[5] = (Double) row[5] + (end.getTime() - start.getTime()) / (1000.0 * 60 * 60);
                     }

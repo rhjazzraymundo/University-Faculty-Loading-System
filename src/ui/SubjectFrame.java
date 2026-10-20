@@ -44,7 +44,6 @@ public class SubjectFrame extends JFrame {
         JPanel root = new JPanel(new BorderLayout(0, 10));
         root.setBackground(Theme.BACKGROUND);
 
-        // HEADER
         JPanel header = new JPanel(new BorderLayout());
         header.setBackground(Theme.HEADER);
         header.setBorder(new EmptyBorder(14, 20, 14, 20));
@@ -61,12 +60,10 @@ public class SubjectFrame extends JFrame {
         header.add(sub, BorderLayout.SOUTH);
         root.add(header, BorderLayout.NORTH);
 
-        // BODY
         JPanel body = new JPanel(new BorderLayout(0, 12));
         body.setOpaque(false);
         body.setBorder(new EmptyBorder(12, 20, 15, 20));
 
-        // FORM CARD
         JPanel formCard = new JPanel(new GridBagLayout());
         formCard.setBackground(Color.WHITE);
         formCard.setBorder(BorderFactory.createCompoundBorder(
@@ -88,7 +85,6 @@ public class SubjectFrame extends JFrame {
         c.gridx = 2; formCard.add(new JLabel("Department:"), c);
         c.gridx = 3; formCard.add(cmbDepartment, c);
 
-        // FORM BUTTONS
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
         btnPanel.setOpaque(false);
 
@@ -107,7 +103,6 @@ public class SubjectFrame extends JFrame {
 
         body.add(formCard, BorderLayout.NORTH);
 
-        // TABLE CARD
         JPanel tableCard = new JPanel(new BorderLayout(0, 8));
         tableCard.setBackground(Color.WHITE);
         tableCard.setBorder(BorderFactory.createCompoundBorder(
@@ -137,7 +132,6 @@ public class SubjectFrame extends JFrame {
         root.add(body, BorderLayout.CENTER);
         setContentPane(root);
 
-        // EVENTS
         btnSave.addActionListener(e -> saveSubject());
         btnUpdate.addActionListener(e -> updateSubject());
         btnDelete.addActionListener(e -> deleteSubject());

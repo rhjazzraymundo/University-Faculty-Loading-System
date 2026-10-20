@@ -51,7 +51,6 @@ public class FacultyFrame extends JFrame {
         JPanel root = new JPanel(new BorderLayout(0, 10));
         root.setBackground(Theme.BACKGROUND);
 
-        // HEADER
         JPanel header = new JPanel(new BorderLayout());
         header.setBackground(Theme.HEADER);
         header.setBorder(new EmptyBorder(14, 20, 14, 20));
@@ -68,12 +67,10 @@ public class FacultyFrame extends JFrame {
         header.add(sub, BorderLayout.SOUTH);
         root.add(header, BorderLayout.NORTH);
 
-        // BODY CONTAINER
         JPanel body = new JPanel(new BorderLayout(0, 12));
         body.setOpaque(false);
         body.setBorder(new EmptyBorder(12, 20, 15, 20));
 
-        // FORM CARD
         JPanel formCard = new JPanel(new GridBagLayout());
         formCard.setBackground(Color.WHITE);
         formCard.setBorder(BorderFactory.createCompoundBorder(
@@ -91,7 +88,6 @@ public class FacultyFrame extends JFrame {
         addFormRow(formCard, c, 0, 3, "Employment:", cmbEmploymentType, "Max Units:", txtMaxUnits);
         addFormRow(formCard, c, 0, 4, "Status:", cmbStatus, "", new JLabel(""));
 
-        // FORM BUTTONS
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
         btnPanel.setOpaque(false);
 
@@ -110,7 +106,6 @@ public class FacultyFrame extends JFrame {
 
         body.add(formCard, BorderLayout.NORTH);
 
-        // SEARCH & TABLE CARD
         JPanel tableCard = new JPanel(new BorderLayout(0, 8));
         tableCard.setBackground(Color.WHITE);
         tableCard.setBorder(BorderFactory.createCompoundBorder(
@@ -118,7 +113,6 @@ public class FacultyFrame extends JFrame {
                 new EmptyBorder(12, 16, 12, 16)
         ));
 
-        // Search Bar
         JPanel searchBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         searchBar.setOpaque(false);
         searchBar.add(new JLabel("Search Keyword:"));
@@ -131,7 +125,6 @@ public class FacultyFrame extends JFrame {
 
         tableCard.add(searchBar, BorderLayout.NORTH);
 
-        // Table
         table.setRowHeight(26);
         Theme.styleTable(table);
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -142,7 +135,6 @@ public class FacultyFrame extends JFrame {
         root.add(body, BorderLayout.CENTER);
         setContentPane(root);
 
-        // LISTENERS
         btnSave.addActionListener(e -> saveFaculty());
         btnUpdate.addActionListener(e -> updateFaculty());
         btnDelete.addActionListener(e -> deleteFaculty());
@@ -222,7 +214,6 @@ public class FacultyFrame extends JFrame {
         table.setModel(tableModel);
     }
 
-    /** Department code (JOIN-style lookup) shown in the table instead of the numeric ID. */
     private String getDeptCode(int id) {
         for (int i = 0; i < cmbDepartment.getItemCount(); i++) {
             Department d = cmbDepartment.getItemAt(i);

@@ -68,7 +68,6 @@ public class ScheduleFrame extends JFrame {
         JPanel root = new JPanel(new BorderLayout(0, 10));
         root.setBackground(Theme.BACKGROUND);
 
-        // HEADER
         JPanel header = new JPanel(new BorderLayout());
         header.setBackground(Theme.HEADER);
         header.setBorder(new EmptyBorder(14, 20, 14, 20));
@@ -85,12 +84,10 @@ public class ScheduleFrame extends JFrame {
         header.add(sub, BorderLayout.SOUTH);
         root.add(header, BorderLayout.NORTH);
 
-        // BODY
         JPanel body = new JPanel(new BorderLayout(0, 12));
         body.setOpaque(false);
         body.setBorder(new EmptyBorder(12, 20, 15, 20));
 
-        // FORM CARD
         JPanel formCard = new JPanel(new GridLayout(5, 4, 10, 8));
         formCard.setBackground(Color.WHITE);
         formCard.setBorder(BorderFactory.createCompoundBorder(
@@ -122,7 +119,6 @@ public class ScheduleFrame extends JFrame {
         formCard.add(lblFacultyLoad);
         formCard.add(new JLabel("")); formCard.add(new JLabel(""));
 
-        // ACTION BUTTONS
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
         btnPanel.setOpaque(false);
 
@@ -142,7 +138,6 @@ public class ScheduleFrame extends JFrame {
         formSection.add(btnPanel, BorderLayout.SOUTH);
         body.add(formSection, BorderLayout.NORTH);
 
-        // TABLE CARD
         JPanel tableCard = new JPanel(new BorderLayout(0, 8));
         tableCard.setBackground(Color.WHITE);
         tableCard.setBorder(BorderFactory.createCompoundBorder(
@@ -179,7 +174,6 @@ public class ScheduleFrame extends JFrame {
         root.add(body, BorderLayout.CENTER);
         setContentPane(root);
 
-        // LISTENERS
         btnSave.addActionListener(e -> saveSchedule());
         btnUpdate.addActionListener(e -> updateSchedule());
         btnDelete.addActionListener(e -> deleteSchedule());
@@ -418,7 +412,6 @@ public class ScheduleFrame extends JFrame {
         showScheduleRows(kw, "Error searching schedules");
     }
 
-    /** Fills the table from ScheduleDAO (keyword null = all schedules). */
     private void showScheduleRows(String keyword, String errorTitle) {
         tableModel.setRowCount(0);
         try {

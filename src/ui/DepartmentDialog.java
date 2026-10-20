@@ -46,12 +46,10 @@ public class DepartmentDialog extends JDialog {
         header.add(title, BorderLayout.CENTER);
         root.add(header, BorderLayout.NORTH);
 
-        // BODY
         JPanel body = new JPanel(new BorderLayout(0, 10));
         body.setOpaque(false);
         body.setBorder(new EmptyBorder(10, 16, 12, 16));
 
-        // TOP: form card + search card
         JPanel top = new JPanel(new GridLayout(2, 1, 0, 8));
         top.setOpaque(false);
 
@@ -81,7 +79,6 @@ public class DepartmentDialog extends JDialog {
 
         body.add(top, BorderLayout.NORTH);
 
-        // TABLE
         tableModel = new DefaultTableModel(new Object[]{"ID", "Department Code", "Department Name"}, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
@@ -91,7 +88,6 @@ public class DepartmentDialog extends JDialog {
         Theme.styleTable(table);
         body.add(new JScrollPane(table), BorderLayout.CENTER);
 
-        // BOTTOM
         JPanel bottom = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         bottom.setOpaque(false);
         JButton btnClose = createBtn("Close", Theme.SECONDARY, 85);
@@ -100,7 +96,6 @@ public class DepartmentDialog extends JDialog {
 
         root.add(body, BorderLayout.CENTER);
 
-        // EVENTS
         btnSave.addActionListener(e -> saveDepartment());
         btnUpdate.addActionListener(e -> updateDepartment());
         btnDelete.addActionListener(e -> deleteDepartment());
@@ -136,7 +131,6 @@ public class DepartmentDialog extends JDialog {
         return btn;
     }
 
-    // ---------------------------------------------------------------- data
     private void loadDepartments() {
         try {
             display(departmentDAO.getAllDepartments());
@@ -176,7 +170,6 @@ public class DepartmentDialog extends JDialog {
         txtName.setText(tableModel.getValueAt(row, 2).toString());
     }
 
-    // ------------------------------------------------------------- actions
     private Department readForm() {
         String code = txtCode.getText().trim();
         String name = txtName.getText().trim();

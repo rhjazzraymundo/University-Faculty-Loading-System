@@ -22,7 +22,6 @@ public final class Validator {
         return isBlank(s) || PHONE.matcher(s.trim()).matches();
     }
 
-    /** null when not a whole number. */
     public static Integer parseInt(String s) {
         try {
             return Integer.valueOf(s.trim());

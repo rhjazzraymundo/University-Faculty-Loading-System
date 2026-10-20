@@ -2,7 +2,6 @@ package model;
 
 import java.sql.Time;
 
-/** Describes an existing schedule that overlaps a new one (used by the conflict warnings). */
 public class ScheduleConflict {
     private final String subjectCode;
     private final String section;

@@ -10,10 +10,8 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Every method throws SQLException so the UI can show it. */
 public class DepartmentDAO {
 
-    // READ
     public List<Department> getAllDepartments() throws SQLException {
         String sql = "SELECT department_id, department_code, department_name "
                    + "FROM departments ORDER BY department_code";
@@ -26,7 +24,6 @@ public class DepartmentDAO {
         return list;
     }
 
-    // SEARCH 
     public List<Department> searchDepartments(String keyword) throws SQLException {
         String sql = "SELECT department_id, department_code, department_name FROM departments "
                    + "WHERE UPPER(department_code) LIKE ? OR UPPER(department_name) LIKE ? "
@@ -44,7 +41,6 @@ public class DepartmentDAO {
         return list;
     }
 
-    // CREATE
     public boolean addDepartment(Department department) throws SQLException {
         String sql = "INSERT INTO departments (department_code, department_name) VALUES (?, ?)";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -55,7 +51,6 @@ public class DepartmentDAO {
         }
     }
 
-    // UPDATE
     public boolean updateDepartment(Department department) throws SQLException {
         String sql = "UPDATE departments SET department_code = ?, department_name = ? "
                    + "WHERE department_id = ?";
@@ -68,7 +63,6 @@ public class DepartmentDAO {
         }
     }
 
-    // DELETE 
     public boolean deleteDepartment(int departmentId) throws SQLException {
         String sql = "DELETE FROM departments WHERE department_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();

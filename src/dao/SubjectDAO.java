@@ -12,7 +12,6 @@ import java.util.List;
 
 public class SubjectDAO {
 
-    // CREATE
     public boolean addSubject(Subject subject) throws SQLException {
         String sql = "INSERT INTO subjects (subject_code, subject_title, units, department_id) "
                    + "VALUES (?, ?, ?, ?)";
@@ -26,7 +25,6 @@ public class SubjectDAO {
         }
     }
 
-    // READ
     public List<Subject> getAllSubjects() throws SQLException {
         String sql = "SELECT subject_id, subject_code, subject_title, units, department_id "
                    + "FROM subjects ORDER BY subject_code";
@@ -39,7 +37,6 @@ public class SubjectDAO {
         return list;
     }
 
-    // SEARCH
     public List<Subject> searchSubjects(String keyword) throws SQLException {
         String sql = "SELECT subject_id, subject_code, subject_title, units, department_id "
                    + "FROM subjects WHERE UPPER(subject_code) LIKE ? OR UPPER(subject_title) LIKE ? "
@@ -57,7 +54,6 @@ public class SubjectDAO {
         return list;
     }
 
-    // UPDATE
     public boolean updateSubject(Subject subject) throws SQLException {
         String sql = "UPDATE subjects SET subject_code = ?, subject_title = ?, units = ?, "
                    + "department_id = ? WHERE subject_id = ?";
@@ -72,7 +68,6 @@ public class SubjectDAO {
         }
     }
 
-    // DELETE (fails with SQLState 23503 if the subject is scheduled)
     public boolean deleteSubject(int subjectId) throws SQLException {
         String sql = "DELETE FROM subjects WHERE subject_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();

@@ -88,7 +88,6 @@ public class DashboardFrame extends JFrame {
 
         centerPanel.add(cardsRow, BorderLayout.NORTH);
 
-        // MODULE NAVIGATION SECTION
         JPanel moduleSection = new JPanel(new BorderLayout(0, 10));
         moduleSection.setOpaque(false);
 
@@ -137,7 +136,6 @@ public class DashboardFrame extends JFrame {
 
         root.add(footer, BorderLayout.SOUTH);
 
-        // NAVIGATION ACTIONS (WITH ROLE ACCESS CHECK)
         btnFaculty.addActionListener(e -> {
             if (!isAdmin) {
                 showAccessDenied("Only Administrators can modify Faculty records.");
@@ -179,7 +177,6 @@ public class DashboardFrame extends JFrame {
     }
 
     
-    // STAT CARD HELPER (Standard Swing/AWT components)
     private JPanel createStatCard(String title, JLabel countLabel, String subtitle, Color themeColor) {
         JPanel card = new JPanel(new BorderLayout(4, 4));
         card.setBackground(Color.WHITE);
@@ -206,7 +203,6 @@ public class DashboardFrame extends JFrame {
         return card;
     }
 
-    // NAVIGATION BUTTON HELPER (Standard JButton + Fonts)
     private JButton createNavButton(String title, String subtitle, boolean enabled) {
         JButton btn = new JButton();
         btn.setLayout(new GridLayout(2, 1, 2, 2));

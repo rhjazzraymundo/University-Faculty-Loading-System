@@ -16,18 +16,15 @@ import java.util.List;
 
 public class ScheduleDAO {
 
-    /** Sorts days Monday to Saturday instead of alphabetically. */
     private static final String DAY_ORDER =
             "CASE day_of_week WHEN 'Monday' THEN 1 WHEN 'Tuesday' THEN 2 WHEN 'Wednesday' THEN 3 "
           + "WHEN 'Thursday' THEN 4 WHEN 'Friday' THEN 5 WHEN 'Saturday' THEN 6 ELSE 7 END";
 
-    /** An unassigned faculty (id 0 or less) is stored as NULL so the foreign key stays valid. */
     private static void setFaculty(PreparedStatement ps, int index, int facultyId) throws SQLException {
         if (facultyId <= 0) ps.setNull(index, Types.INTEGER);
         else ps.setInt(index, facultyId);
     }
 
-    // CREATE
     public boolean addSchedule(Schedule schedule) throws SQLException {
         String sql = "INSERT INTO schedules "
                    + "(subject_id, faculty_id, room_id, section, term, day_of_week, start_time, end_time) "
@@ -46,7 +43,6 @@ public class ScheduleDAO {
         }
     }
 
-    // READ / SEARCH 
     public List<Object[]> getScheduleRows(String keyword) throws SQLException {
         boolean all = keyword == null || keyword.trim().isEmpty();
         String sql = "SELECT s.schedule_id, s.section, s.term, s.day_of_week, s.start_time, s.end_time, "
@@ -84,9 +80,6 @@ public class ScheduleDAO {
         return rows;
     }
 
-    // =====================================================================
-    // UPDATE
-    // =====================================================================
     public boolean updateSchedule(Schedule schedule) throws SQLException {
         String sql = "UPDATE schedules SET subject_id = ?, faculty_id = ?, room_id = ?, section = ?, "
                    + "term = ?, day_of_week = ?, start_time = ?, end_time = ? WHERE schedule_id = ?";
@@ -105,7 +98,6 @@ public class ScheduleDAO {
         }
     }
 
-    // DELETE
     public boolean deleteSchedule(int scheduleId) throws SQLException {
         String sql = "DELETE FROM schedules WHERE schedule_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -115,7 +107,6 @@ public class ScheduleDAO {
         }
     }
 
-    // TEACHING LOAD CALCULATIONS
     public int getTotalAssignedUnits(int facultyId, String term, int excludeScheduleId) throws SQLException {
         String sql = "SELECT COALESCE(SUM(sub.units), 0) AS total_units "
                    + "FROM schedules s "
@@ -165,7 +156,6 @@ public class ScheduleDAO {
         }
     }
 
-    /** Maximum unit load of a faculty member (24 if the faculty row is not found). */
     public int getFacultyMaxUnits(int facultyId) throws SQLException {
         String sql = "SELECT max_units FROM faculty WHERE faculty_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -177,7 +167,6 @@ public class ScheduleDAO {
         }
     }
 
-    // CONFLICT CHECKS
     public boolean existsDuplicate(Schedule s, int excludeId) throws SQLException {
         String sql = "SELECT schedule_id FROM schedules "
                    + "WHERE subject_id = ? AND section = ? AND TRIM(term) = TRIM(?) "
