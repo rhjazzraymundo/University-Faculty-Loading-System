@@ -27,8 +27,8 @@ public class ScheduleDAO {
 
     public boolean addSchedule(Schedule schedule) throws SQLException {
         String sql = "INSERT INTO schedules "
-                   + "(subject_id, faculty_id, room_id, section, term, day_of_week, start_time, end_time) "
-                   + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                   + "(subject_id, faculty_id, room_id, section, term, day_of_week, start_time, end_time, session_type) "
+                   + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, schedule.getSubjectId());
@@ -39,6 +39,7 @@ public class ScheduleDAO {
             ps.setString(6, schedule.getDayOfWeek());
             ps.setTime(7, schedule.getStartTime());
             ps.setTime(8, schedule.getEndTime());
+            ps.setString(9, schedule.getSessionType());
             return ps.executeUpdate() > 0;
         }
     }
@@ -46,7 +47,7 @@ public class ScheduleDAO {
     public List<Object[]> getScheduleRows(String keyword) throws SQLException {
         boolean all = keyword == null || keyword.trim().isEmpty();
         String sql = "SELECT s.schedule_id, s.section, s.term, s.day_of_week, s.start_time, s.end_time, "
-                   + "       sub.subject_code, sub.units, f.first_name, f.last_name, r.room_name "
+                   + "       sub.subject_code, sub.units, f.first_name, f.last_name, r.room_name, s.session_type "
                    + "FROM schedules s "
                    + "INNER JOIN subjects sub ON s.subject_id = sub.subject_id "
                    + "LEFT JOIN faculty f ON s.faculty_id = f.faculty_id "
@@ -72,7 +73,8 @@ public class ScheduleDAO {
                     rows.add(new Object[]{
                         rs.getInt("schedule_id"), rs.getString("subject_code"), rs.getInt("units"),
                         faculty, rs.getString("room_name"), rs.getString("section"), rs.getString("term"),
-                        rs.getString("day_of_week"), rs.getTime("start_time"), rs.getTime("end_time")
+                        rs.getString("day_of_week"), rs.getTime("start_time"), rs.getTime("end_time"),
+                        rs.getString("session_type")
                     });
                 }
             }
@@ -82,7 +84,7 @@ public class ScheduleDAO {
 
     public boolean updateSchedule(Schedule schedule) throws SQLException {
         String sql = "UPDATE schedules SET subject_id = ?, faculty_id = ?, room_id = ?, section = ?, "
-                   + "term = ?, day_of_week = ?, start_time = ?, end_time = ? WHERE schedule_id = ?";
+                   + "term = ?, day_of_week = ?, start_time = ?, end_time = ?, session_type = ? WHERE schedule_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, schedule.getSubjectId());
@@ -93,7 +95,8 @@ public class ScheduleDAO {
             ps.setString(6, schedule.getDayOfWeek());
             ps.setTime(7, schedule.getStartTime());
             ps.setTime(8, schedule.getEndTime());
-            ps.setInt(9, schedule.getScheduleId());
+            ps.setString(9, schedule.getSessionType());
+            ps.setInt(10, schedule.getScheduleId());
             return ps.executeUpdate() > 0;
         }
     }
@@ -143,6 +146,40 @@ public class ScheduleDAO {
             }
         }
         return totalHours;
+    }
+
+    public double[] getLectureLabHours(int facultyId, String term, int excludeScheduleId) throws SQLException {
+        String sql = "SELECT session_type, start_time, end_time FROM schedules "
+                   + "WHERE faculty_id = ? AND term = ? AND schedule_id <> ?";
+        double[] hours = new double[2];
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, facultyId);
+            ps.setString(2, term);
+            ps.setInt(3, excludeScheduleId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Time start = rs.getTime("start_time");
+                    Time end = rs.getTime("end_time");
+                    if (start == null || end == null) continue;
+                    double h = (end.getTime() - start.getTime()) / (1000.0 * 60 * 60);
+                    if ("Laboratory".equals(rs.getString("session_type"))) hours[1] += h;
+                    else hours[0] += h;
+                }
+            }
+        }
+        return hours;
+    }
+
+    public String getEmploymentType(int facultyId) throws SQLException {
+        String sql = "SELECT employment_type FROM faculty WHERE faculty_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, facultyId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getString("employment_type") : "Full-time";
+            }
+        }
     }
 
     public int getSubjectUnits(int subjectId) throws SQLException {

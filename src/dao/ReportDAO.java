@@ -1,6 +1,8 @@
 package dao;
 
 import database.DatabaseConnection;
+import util.LoadCalculator;
+import util.WorkingHours;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -16,61 +18,65 @@ import java.util.Map;
 public class ReportDAO {
 
 
-    public static final double WEEKLY_AVAILABLE_HOURS = 14.0 * 6;
+    public static final double WEEKLY_AVAILABLE_HOURS = WorkingHours.WEEKLY_AVAILABLE_HOURS;   // 7:00 AM - 6:00 PM, Mon-Sat
+
 
 
     public List<Object[]> getFacultyLoadSummary(String term) throws SQLException {
         String sql = "SELECT f.faculty_id, f.employee_no, f.first_name, f.last_name, "
-                   + "       d.department_code, f.employment_type, f.max_units, "
-                   + "       COALESCE(SUM(sub.units), 0) AS total_units "
+                   + "       d.department_code, f.employment_type "
                    + "FROM faculty f "
                    + "INNER JOIN departments d ON f.department_id = d.department_id "
-                   + "LEFT JOIN schedules s ON f.faculty_id = s.faculty_id AND s.term = ? "
-                   + "LEFT JOIN subjects sub ON s.subject_id = sub.subject_id "
                    + "WHERE f.status = 'Active' "
-                   + "GROUP BY f.faculty_id, f.employee_no, f.first_name, f.last_name, "
-                   + "         d.department_code, f.employment_type, f.max_units "
                    + "ORDER BY d.department_code, f.last_name";
 
         List<Object[]> rows = new ArrayList<>();
         try (Connection conn = DatabaseConnection.getConnection()) {
-            Map<Integer, Double> hours = weeklyHours(conn, term);
+            Map<Integer, double[]> hours = lectureLabHours(conn, term);
 
-            try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                ps.setString(1, term);
-                try (ResultSet rs = ps.executeQuery()) {
-                    while (rs.next()) {
-                        int facultyId = rs.getInt("faculty_id");
-                        rows.add(new Object[]{
-                            rs.getString("employee_no"),
-                            rs.getString("first_name") + " " + rs.getString("last_name"),
-                            rs.getString("department_code"),
-                            rs.getString("employment_type"),
-                            rs.getInt("total_units"),
-                            rs.getInt("max_units"),
-                            hours.getOrDefault(facultyId, 0.0)
-                        });
-                    }
+            try (PreparedStatement ps = conn.prepareStatement(sql);
+                 ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    int facultyId = rs.getInt("faculty_id");
+                    String type = rs.getString("employment_type");
+
+                    double[] h = hours.getOrDefault(facultyId, new double[2]);
+                    double lecture = h[0];
+                    double lab = h[1];
+                    double assigned = LoadCalculator.creditedHours(lecture, lab);
+                    double regular = LoadCalculator.regularHours(type);
+                    double fte = LoadCalculator.fte(assigned, regular);
+                    double ot = LoadCalculator.overtime(assigned, regular);
+
+                    rows.add(new Object[]{
+                        rs.getString("employee_no"),
+                        rs.getString("first_name") + " " + rs.getString("last_name"),
+                        rs.getString("department_code"),
+                        type,
+                        lecture, lab, assigned, fte, ot, fte + ot,
+                        LoadCalculator.status(assigned, regular)
+                    });
                 }
             }
         }
         return rows;
     }
 
-    private Map<Integer, Double> weeklyHours(Connection conn, String term) throws SQLException {
-        String sql = "SELECT faculty_id, start_time, end_time FROM schedules "
+    private Map<Integer, double[]> lectureLabHours(Connection conn, String term) throws SQLException {
+        String sql = "SELECT faculty_id, session_type, start_time, end_time FROM schedules "
                    + "WHERE term = ? AND faculty_id IS NOT NULL";
-        Map<Integer, Double> hours = new HashMap<>();
+        Map<Integer, double[]> hours = new HashMap<>();
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, term);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     Time start = rs.getTime("start_time");
                     Time end = rs.getTime("end_time");
-                    if (start != null && end != null) {
-                        double h = (end.getTime() - start.getTime()) / (1000.0 * 60 * 60);
-                        hours.merge(rs.getInt("faculty_id"), h, Double::sum);
-                    }
+                    if (start == null || end == null) continue;
+                    double h = (end.getTime() - start.getTime()) / (1000.0 * 60 * 60);
+                    double[] totals = hours.computeIfAbsent(rs.getInt("faculty_id"), k -> new double[2]);
+                    if ("Laboratory".equals(rs.getString("session_type"))) totals[1] += h;
+                    else totals[0] += h;
                 }
             }
         }

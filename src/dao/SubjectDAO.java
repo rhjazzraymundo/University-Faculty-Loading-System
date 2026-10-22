@@ -54,6 +54,18 @@ public class SubjectDAO {
         return list;
     }
 
+    public Subject getById(int subjectId) throws SQLException {
+        String sql = "SELECT subject_id, subject_code, subject_title, units, department_id "
+                   + "FROM subjects WHERE subject_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, subjectId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? map(rs) : null;
+            }
+        }
+    }
+
     public boolean updateSubject(Subject subject) throws SQLException {
         String sql = "UPDATE subjects SET subject_code = ?, subject_title = ?, units = ?, "
                    + "department_id = ? WHERE subject_id = ?";

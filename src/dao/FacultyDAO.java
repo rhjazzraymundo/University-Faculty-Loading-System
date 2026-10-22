@@ -79,7 +79,7 @@ public class FacultyDAO {
 
         List<Faculty> facultyList = new ArrayList<>();
 
-        String sql = "SELECT faculty_id, employee_no, first_name, last_name, max_units "
+        String sql = "SELECT faculty_id, employee_no, first_name, last_name, max_units, employment_type "
                    + "FROM faculty WHERE status = 'Active' "
                    + "ORDER BY last_name, first_name";
 
@@ -94,6 +94,7 @@ public class FacultyDAO {
                 faculty.setFirstName(rs.getString("first_name"));
                 faculty.setLastName(rs.getString("last_name"));
                 faculty.setMaxUnits(rs.getInt("max_units"));
+                faculty.setEmploymentType(rs.getString("employment_type"));
                 facultyList.add(faculty);
             }
         }
@@ -168,6 +169,76 @@ public class FacultyDAO {
         }
 
         return facultyList;
+    }
+
+    public List<Faculty> getFacultyPage(int offset, int limit)
+            throws SQLException {
+
+        List<Faculty> facultyList = new ArrayList<>();
+
+        String sql = "SELECT faculty_id, employee_no, department_id, "
+                   + "first_name, last_name, email, contact_no, "
+                   + "employment_type, max_units, status "
+                   + "FROM faculty "
+                   + "ORDER BY last_name, first_name, faculty_id "
+                   + "OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, offset);
+            ps.setInt(2, limit);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Faculty f = new Faculty();
+                    f.setFacultyId(rs.getInt("faculty_id"));
+                    f.setEmployeeNo(rs.getString("employee_no"));
+                    f.setDepartmentId(rs.getInt("department_id"));
+                    f.setFirstName(rs.getString("first_name"));
+                    f.setLastName(rs.getString("last_name"));
+                    f.setEmail(rs.getString("email"));
+                    f.setContactNo(rs.getString("contact_no"));
+                    f.setEmploymentType(rs.getString("employment_type"));
+                    f.setMaxUnits(rs.getInt("max_units"));
+                    f.setStatus(rs.getString("status"));
+                    facultyList.add(f);
+                }
+            }
+        }
+
+        return facultyList;
+    }
+
+    public Faculty getById(int facultyId) throws SQLException {
+
+        String sql = "SELECT faculty_id, employee_no, department_id, "
+                   + "first_name, last_name, email, contact_no, "
+                   + "employment_type, max_units, status "
+                   + "FROM faculty WHERE faculty_id = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, facultyId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return null;
+
+                Faculty f = new Faculty();
+                f.setFacultyId(rs.getInt("faculty_id"));
+                f.setEmployeeNo(rs.getString("employee_no"));
+                f.setDepartmentId(rs.getInt("department_id"));
+                f.setFirstName(rs.getString("first_name"));
+                f.setLastName(rs.getString("last_name"));
+                f.setEmail(rs.getString("email"));
+                f.setContactNo(rs.getString("contact_no"));
+                f.setEmploymentType(rs.getString("employment_type"));
+                f.setMaxUnits(rs.getInt("max_units"));
+                f.setStatus(rs.getString("status"));
+                return f;
+            }
+        }
     }
 
     public boolean updateFaculty(Faculty faculty)

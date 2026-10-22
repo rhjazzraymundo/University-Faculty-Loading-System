@@ -13,6 +13,15 @@ public class Schedule {
     private String dayOfWeek;
     private Time startTime;
     private Time endTime;
+    private String sessionType = "Lecture";   
+
+    public String getSessionType() {
+        return sessionType;
+    }
+
+    public void setSessionType(String sessionType) {
+        this.sessionType = sessionType;
+    }
 
     public Schedule() {
     }

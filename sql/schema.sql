@@ -74,22 +74,27 @@ CREATE TABLE rooms (
 );
 
 -- ---------- SCHEDULES (faculty_id stays NULL until a faculty is assigned) ----------
+-- session_type separates lecture from laboratory hours (lab hours are credited at 0.75).
+-- Classes must fall within working hours: 7:00 AM to 6:00 PM.
 CREATE TABLE schedules (
-    schedule_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    subject_id  INTEGER     NOT NULL,
-    faculty_id  INTEGER,
-    room_id     INTEGER     NOT NULL,
-    section     VARCHAR(30) NOT NULL,
-    term        VARCHAR(30) NOT NULL,
-    day_of_week VARCHAR(10) NOT NULL,
-    start_time  TIME        NOT NULL,
-    end_time    TIME        NOT NULL,
+    schedule_id  INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    subject_id   INTEGER     NOT NULL,
+    faculty_id   INTEGER,
+    room_id      INTEGER     NOT NULL,
+    section      VARCHAR(30) NOT NULL,
+    term         VARCHAR(30) NOT NULL,
+    day_of_week  VARCHAR(10) NOT NULL,
+    start_time   TIME        NOT NULL,
+    end_time     TIME        NOT NULL,
+    session_type VARCHAR(12) NOT NULL DEFAULT 'Lecture',
     CONSTRAINT fk_sched_subject FOREIGN KEY (subject_id) REFERENCES subjects (subject_id),
     CONSTRAINT fk_sched_faculty FOREIGN KEY (faculty_id) REFERENCES faculty (faculty_id),
     CONSTRAINT fk_sched_room    FOREIGN KEY (room_id)    REFERENCES rooms (room_id),
     CONSTRAINT chk_sched_day  CHECK (day_of_week IN
         ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday')),
-    CONSTRAINT chk_sched_time CHECK (end_time > start_time)
+    CONSTRAINT chk_sched_time CHECK (end_time > start_time),
+    CONSTRAINT chk_sched_hours CHECK (start_time >= TIME('07:00:00') AND end_time <= TIME('18:00:00')),
+    CONSTRAINT chk_sched_session CHECK (session_type IN ('Lecture', 'Laboratory'))
 );
 
 -- ============================================================
@@ -148,20 +153,75 @@ INSERT INTO rooms (room_name, building, capacity, room_type) VALUES
     ('Room 302', 'Main Building',  45, 'Lecture'),
     ('Lab 3',    'IT Building',    30, 'Laboratory');
 
--- Sample schedules (no conflicts). Two are left unassigned (faculty_id NULL).
-INSERT INTO schedules (subject_id, faculty_id, room_id, section, term, day_of_week, start_time, end_time) VALUES
-    (1,  1,    1, 'BSIT-1A', '2026-2027 1st Sem', 'Monday',    '08:00:00', '09:30:00'),
-    (2,  1,    5, 'BSIT-1A', '2026-2027 1st Sem', 'Tuesday',   '09:00:00', '12:00:00'),
-    (3,  2,    5, 'BSIT-2A', '2026-2027 1st Sem', 'Wednesday', '13:00:00', '16:00:00'),
-    (4,  2,    6, 'BSIT-2A', '2026-2027 1st Sem', 'Thursday',  '13:00:00', '16:00:00'),
-    (5,  3,    3, 'BSCS-1A', '2026-2027 1st Sem', 'Monday',    '10:00:00', '11:30:00'),
-    (6,  3,    6, 'BSCS-2A', '2026-2027 1st Sem', 'Friday',    '08:00:00', '12:00:00'),
-    (7,  5,    2, 'BSIT-1A', '2026-2027 1st Sem', 'Wednesday', '10:00:00', '11:30:00'),
-    (8,  6,    4, 'BSIT-1A', '2026-2027 1st Sem', 'Thursday',  '08:00:00', '09:30:00'),
-    (9,  7,    7, 'BSIT-1A', '2026-2027 1st Sem', 'Saturday',  '08:00:00', '10:00:00'),
-    (10, NULL, 1, 'BSIT-3A', '2026-2027 1st Sem', 'Tuesday',   '13:00:00', '14:30:00'),
-        (3,  NULL, 6, 'BSIT-2B', '2026-2027 1st Sem', 'Friday',    '13:00:00', '16:00:00'),
-    (5,  4,    8, 'BSCS-1B', '2026-2027 1st Sem', 'Monday',    '08:00:00', '09:30:00'),
-    (4,  4,   10, 'BSIT-2B', '2026-2027 1st Sem', 'Tuesday',   '14:00:00', '15:30:00'),
-    (2,  4,    8, 'BSIT-1B', '2026-2027 1st Sem', 'Wednesday', '08:00:00', '09:30:00'),
-    (8,  4,    8, 'BSIT-1B', '2026-2027 1st Sem', 'Friday',    '08:00:00', '09:30:00');
+-- Sample schedules (no conflicts, all within 7:00 AM - 6:00 PM). Two are left unassigned (faculty_id NULL).
+-- Laboratory sessions are the ones held in Lab 1, Lab 2 and Lab 3.
+INSERT INTO schedules (subject_id, faculty_id, room_id, section, term, day_of_week, start_time, end_time, session_type) VALUES
+    (1,  1,    1, 'BSIT-1A', '2026-2027 1st Sem', 'Monday',    '08:00:00', '09:30:00', 'Lecture'),
+    (2,  1,    5, 'BSIT-1A', '2026-2027 1st Sem', 'Tuesday',   '09:00:00', '12:00:00', 'Laboratory'),
+    (3,  2,    5, 'BSIT-2A', '2026-2027 1st Sem', 'Wednesday', '13:00:00', '16:00:00', 'Laboratory'),
+    (4,  2,    6, 'BSIT-2A', '2026-2027 1st Sem', 'Thursday',  '13:00:00', '16:00:00', 'Laboratory'),
+    (5,  3,    3, 'BSCS-1A', '2026-2027 1st Sem', 'Monday',    '10:00:00', '11:30:00', 'Lecture'),
+    (6,  3,    6, 'BSCS-2A', '2026-2027 1st Sem', 'Friday',    '08:00:00', '12:00:00', 'Laboratory'),
+    (7,  5,    2, 'BSIT-1A', '2026-2027 1st Sem', 'Wednesday', '10:00:00', '11:30:00', 'Lecture'),
+    (8,  6,    4, 'BSIT-1A', '2026-2027 1st Sem', 'Thursday',  '08:00:00', '09:30:00', 'Lecture'),
+    (9,  7,    7, 'BSIT-1A', '2026-2027 1st Sem', 'Saturday',  '08:00:00', '10:00:00', 'Lecture'),
+    (10, NULL, 1, 'BSIT-3A', '2026-2027 1st Sem', 'Tuesday',   '13:00:00', '14:30:00', 'Lecture'),
+    (3,  NULL, 6, 'BSIT-2B', '2026-2027 1st Sem', 'Friday',    '13:00:00', '16:00:00', 'Laboratory'),
+    (5,  4,    8, 'BSCS-1B', '2026-2027 1st Sem', 'Monday',    '08:00:00', '09:30:00', 'Lecture'),
+    (4,  4,   10, 'BSIT-2B', '2026-2027 1st Sem', 'Tuesday',   '14:00:00', '15:30:00', 'Laboratory'),
+    (2,  4,    8, 'BSIT-1B', '2026-2027 1st Sem', 'Wednesday', '08:00:00', '09:30:00', 'Lecture'),
+    (8,  4,    8, 'BSIT-1B', '2026-2027 1st Sem', 'Friday',    '08:00:00', '09:30:00', 'Lecture');
+
+-- Sample overtime case: Miguel Torres (faculty 10) has 20 lecture hours = 18 regular + 2 overtime.
+INSERT INTO schedules (subject_id, faculty_id, room_id, section, term, day_of_week, start_time, end_time, session_type) VALUES
+    (11, 10, 9, 'BSED-2A', '2026-2027 1st Sem', 'Monday',    '08:00:00', '12:00:00', 'Lecture'),
+    (12, 10, 9, 'BSED-2A', '2026-2027 1st Sem', 'Tuesday',   '08:00:00', '12:00:00', 'Lecture'),
+    (7,  10, 9, 'BSED-2A', '2026-2027 1st Sem', 'Wednesday', '08:00:00', '12:00:00', 'Lecture'),
+    (8,  10, 9, 'BSED-2A', '2026-2027 1st Sem', 'Thursday',  '08:00:00', '12:00:00', 'Lecture'),
+    (11, 10, 9, 'BSED-2A', '2026-2027 1st Sem', 'Friday',    '08:00:00', '12:00:00', 'Lecture');
+
+-- Sample lab-weight case: Daniel Navarro (faculty 12) has 12 lecture + 8 lab hours = 12 + 8 x 0.75 = 18 (full load).
+INSERT INTO schedules (subject_id, faculty_id, room_id, section, term, day_of_week, start_time, end_time, session_type) VALUES
+    (3,  12, 8,  'BSIT-3B', '2026-2027 1st Sem', 'Monday',    '13:00:00', '17:00:00', 'Lecture'),
+    (4,  12, 8,  'BSIT-3B', '2026-2027 1st Sem', 'Tuesday',   '13:00:00', '17:00:00', 'Lecture'),
+    (10, 12, 8,  'BSIT-3B', '2026-2027 1st Sem', 'Wednesday', '13:00:00', '17:00:00', 'Lecture'),
+    (2,  12, 10, 'BSIT-3B', '2026-2027 1st Sem', 'Thursday',  '08:00:00', '12:00:00', 'Laboratory'),
+    (4,  12, 10, 'BSIT-3B', '2026-2027 1st Sem', 'Friday',    '13:00:00', '17:00:00', 'Laboratory');
+
+
+-- Load for the remaining active faculty, so every active faculty member has a load in the sample data.
+-- Sofia Bautista (faculty 11): 9 lecture + 3 lab hrs = 9 + 3 x 0.75 = 11.25
+-- Grace Villanueva (faculty 9): 15 lecture hrs
+-- Isabel Castillo (faculty 13): 12 lecture + 3 lab hrs = 12 + 3 x 0.75 = 14.25
+INSERT INTO schedules (subject_id, faculty_id, room_id, section, term, day_of_week, start_time, end_time, session_type) VALUES
+    (11, 11, 4, 'BSED-1A', '2026-2027 1st Sem', 'Monday',    '13:00:00', '16:00:00', 'Lecture'),
+    (12, 11, 4, 'BSED-1A', '2026-2027 1st Sem', 'Tuesday',   '13:00:00', '16:00:00', 'Lecture'),
+    (7,  11, 4, 'BSED-1A', '2026-2027 1st Sem', 'Wednesday', '13:00:00', '16:00:00', 'Lecture'),
+    (2,  11, 5, 'BSED-1A', '2026-2027 1st Sem', 'Thursday',  '08:00:00', '11:00:00', 'Laboratory'),
+
+    (8,  9,  3, 'BSED-1B', '2026-2027 1st Sem', 'Monday',    '13:00:00', '16:00:00', 'Lecture'),
+    (7,  9,  3, 'BSED-1B', '2026-2027 1st Sem', 'Tuesday',   '08:00:00', '11:00:00', 'Lecture'),
+    (12, 9,  3, 'BSED-1B', '2026-2027 1st Sem', 'Wednesday', '08:00:00', '11:00:00', 'Lecture'),
+    (11, 9,  3, 'BSED-1B', '2026-2027 1st Sem', 'Thursday',  '08:00:00', '11:00:00', 'Lecture'),
+    (9,  9,  3, 'BSED-1B', '2026-2027 1st Sem', 'Friday',    '08:00:00', '11:00:00', 'Lecture'),
+
+    (1,  13, 2, 'BSIT-4A', '2026-2027 1st Sem', 'Monday',    '08:00:00', '11:00:00', 'Lecture'),
+    (5,  13, 2, 'BSIT-4A', '2026-2027 1st Sem', 'Tuesday',   '08:00:00', '11:00:00', 'Lecture'),
+    (6,  13, 2, 'BSIT-4A', '2026-2027 1st Sem', 'Thursday',  '08:00:00', '11:00:00', 'Lecture'),
+    (10, 13, 2, 'BSIT-4A', '2026-2027 1st Sem', 'Friday',    '08:00:00', '11:00:00', 'Lecture'),
+    (3,  13, 6, 'BSIT-4A', '2026-2027 1st Sem', 'Tuesday',   '13:00:00', '16:00:00', 'Laboratory');
+
+
+-- One more faculty with overtime: Patricia Lim (faculty 14), CET.
+-- 15 lecture + 8 lab hrs = 15 + 8 x 0.75 = 21 credited hrs = 18 regular (FTE) + 3 overtime.
+INSERT INTO faculty (employee_no, first_name, last_name, department_id, email, contact_no, employment_type, max_units, status) VALUES
+    ('EMP-014', 'Patricia', 'Lim', 2, 'patricia.lim@university.edu', '09171234514', 'Full-time', 24, 'Active');
+
+INSERT INTO schedules (subject_id, faculty_id, room_id, section, term, day_of_week, start_time, end_time, session_type) VALUES
+    (1,  14, 9, 'BSIT-4B', '2026-2027 1st Sem', 'Monday',    '13:00:00', '16:00:00', 'Lecture'),
+    (5,  14, 9, 'BSIT-4B', '2026-2027 1st Sem', 'Tuesday',   '13:00:00', '16:00:00', 'Lecture'),
+    (6,  14, 9, 'BSIT-4B', '2026-2027 1st Sem', 'Wednesday', '13:00:00', '16:00:00', 'Lecture'),
+    (4,  14, 9, 'BSIT-4B', '2026-2027 1st Sem', 'Thursday',  '13:00:00', '16:00:00', 'Lecture'),
+    (10, 14, 9, 'BSIT-4B', '2026-2027 1st Sem', 'Friday',    '13:00:00', '16:00:00', 'Lecture'),
+    (2,  14, 5, 'BSIT-4B', '2026-2027 1st Sem', 'Monday',    '08:00:00', '12:00:00', 'Laboratory'),
+    (3,  14, 5, 'BSIT-4B', '2026-2027 1st Sem', 'Friday',    '08:00:00', '12:00:00', 'Laboratory');

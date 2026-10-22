@@ -36,6 +36,13 @@ public class FacultyFrame extends JFrame {
     private DefaultTableModel tableModel;
     private int selectedFacultyId = -1;
 
+    private static final int PAGE_SIZE = 5;
+    private int pageOffset = 0;           // index of the first record of the page being shown
+    private static final String FIRST_LABEL = "Show First " + PAGE_SIZE;
+    private static final String NEXT_LABEL = "Show Next " + PAGE_SIZE;
+    private boolean pagedMode = false;    // default view shows all faculty
+    private JButton btnNext;
+
     public FacultyFrame() {
         super("Faculty Management");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -44,7 +51,7 @@ public class FacultyFrame extends JFrame {
 
         buildUI();
         loadDepartments();
-        loadFaculty();
+        reload();
     }
 
     private void buildUI() {
@@ -115,13 +122,16 @@ public class FacultyFrame extends JFrame {
 
         JPanel searchBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         searchBar.setOpaque(false);
-        searchBar.add(new JLabel("Search Keyword:"));
+        searchBar.add(new JLabel("Search (ID or name):"));
         searchBar.add(txtSearch);
 
         JButton btnSearch = createBtn("Search", Theme.PRIMARY);
         JButton btnShowAll = createBtn("Show All", Theme.SECONDARY);
+        btnNext = createBtn(FIRST_LABEL, Theme.ACCENT);
+        btnNext.setPreferredSize(new Dimension(125, 30));
         searchBar.add(btnSearch);
         searchBar.add(btnShowAll);
+        searchBar.add(btnNext);
 
         tableCard.add(searchBar, BorderLayout.NORTH);
 
@@ -136,11 +146,12 @@ public class FacultyFrame extends JFrame {
         setContentPane(root);
 
         btnSave.addActionListener(e -> saveFaculty());
-        btnUpdate.addActionListener(e -> updateFaculty());
+        btnUpdate.addActionListener(e -> openUpdateDialog());
         btnDelete.addActionListener(e -> deleteFaculty());
         btnClear.addActionListener(e -> clearForm());
         btnSearch.addActionListener(e -> searchFaculty());
         btnShowAll.addActionListener(e -> loadFaculty());
+        btnNext.addActionListener(e -> showNextFaculty());
         txtSearch.addActionListener(e -> searchFaculty());
 
         table.getSelectionModel().addListSelectionListener(e -> {
@@ -183,7 +194,44 @@ public class FacultyFrame extends JFrame {
 
     private void loadFaculty() {
         try {
-            displayFaculty(facultyDAO.getAllFaculty());
+            pagedMode = false;
+            pageOffset = 0;
+            List<Faculty> all = facultyDAO.getAllFaculty();
+            displayFaculty(all);
+            btnNext.setText(FIRST_LABEL);                  // back to "Show First 5"
+            btnNext.setEnabled(all.size() > PAGE_SIZE);    // only useful if there is more than one page
+        } catch (SQLException e) {
+            DbErrors.show(this, "Error loading faculty", e);
+        }
+    }
+
+    private void reload() {
+        if (!pagedMode) { loadFaculty(); return; }
+        showPage(pageOffset);
+    }
+
+    private void showNextFaculty() {
+        if (!pagedMode) {                                  // first click: switch from "all" to the first 5
+            pagedMode = true;
+            showPage(0);
+        } else {
+            showPage(pageOffset + PAGE_SIZE);
+        }
+    }
+
+    private void showPage(int offset) {
+        try {
+            List<Faculty> rows = facultyDAO.getFacultyPage(offset, PAGE_SIZE + 1);   // +1 tells us if more exist
+            while (rows.isEmpty() && offset > 0) {         // page emptied by deletes: step back
+                offset -= PAGE_SIZE;
+                rows = facultyDAO.getFacultyPage(offset, PAGE_SIZE + 1);
+            }
+            boolean more = rows.size() > PAGE_SIZE;
+            if (more) rows = rows.subList(0, PAGE_SIZE);
+            pageOffset = offset;
+            displayFaculty(rows);
+            btnNext.setText(NEXT_LABEL);                   // "Show First 5" turns into "Show Next 5"
+            btnNext.setEnabled(more);                      // disabled when there are no more records
         } catch (SQLException e) {
             DbErrors.show(this, "Error loading faculty", e);
         }
@@ -191,9 +239,25 @@ public class FacultyFrame extends JFrame {
 
     private void searchFaculty() {
         String keyword = txtSearch.getText().trim();
-        if (keyword.isEmpty()) { loadFaculty(); return; }
+        if (keyword.isEmpty()) { reload(); return; }
+        btnNext.setEnabled(false);
         try {
-            displayFaculty(facultyDAO.searchFaculty(keyword));
+            if (keyword.matches("\\d+")) {
+                List<Faculty> result = new java.util.ArrayList<>();
+                try {
+                    Faculty f = facultyDAO.getById(Integer.parseInt(keyword));
+                    if (f != null) result.add(f);
+                } catch (NumberFormatException tooLong) {
+
+                }
+                displayFaculty(result);
+                if (result.isEmpty()) {
+                    JOptionPane.showMessageDialog(this, "No faculty record found with ID " + keyword + ".",
+                            "No Results", JOptionPane.INFORMATION_MESSAGE);
+                }
+            } else {
+                displayFaculty(facultyDAO.searchFaculty(keyword));
+            }
         } catch (SQLException e) {
             DbErrors.show(this, "Error searching faculty", e);
         }
@@ -204,6 +268,11 @@ public class FacultyFrame extends JFrame {
         tableModel = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
+        table.setModel(tableModel);
+        appendFaculty(list);
+    }
+
+    private void appendFaculty(List<Faculty> list) {
         for (Faculty f : list) {
             tableModel.addRow(new Object[]{
                 f.getFacultyId(), f.getEmployeeNo(), f.getFirstName(), f.getLastName(),
@@ -211,7 +280,6 @@ public class FacultyFrame extends JFrame {
                 f.getMaxUnits(), f.getStatus()
             });
         }
-        table.setModel(tableModel);
     }
 
     private String getDeptCode(int id) {
@@ -225,29 +293,7 @@ public class FacultyFrame extends JFrame {
     private void selectFaculty() {
         int row = table.getSelectedRow();
         if (row == -1) return;
-
         selectedFacultyId = Integer.parseInt(table.getValueAt(row, 0).toString());
-        txtEmployeeNo.setText(table.getValueAt(row, 1).toString());
-        txtFirstName.setText(table.getValueAt(row, 2).toString());
-        txtLastName.setText(table.getValueAt(row, 3).toString());
-
-        String deptCode = table.getValueAt(row, 4).toString();
-        for (int i = 0; i < cmbDepartment.getItemCount(); i++) {
-            if (cmbDepartment.getItemAt(i).getDepartmentCode().equals(deptCode)) {
-                cmbDepartment.setSelectedIndex(i);
-                break;
-            }
-        }
-
-        Object email = table.getValueAt(row, 5);
-        txtEmail.setText(email == null ? "" : email.toString());
-
-        Object contact = table.getValueAt(row, 6);
-        txtContactNo.setText(contact == null ? "" : contact.toString());
-
-        cmbEmploymentType.setSelectedItem(table.getValueAt(row, 7).toString());
-        txtMaxUnits.setText(table.getValueAt(row, 8).toString());
-        cmbStatus.setSelectedItem(table.getValueAt(row, 9).toString());
     }
 
     private void saveFaculty() {
@@ -257,25 +303,35 @@ public class FacultyFrame extends JFrame {
             if (facultyDAO.addFaculty(faculty)) {
                 JOptionPane.showMessageDialog(this, "Faculty record saved successfully.");
                 clearForm();
-                loadFaculty();
+                reload();
             }
         } catch (SQLException e) {
             DbErrors.show(this, "Database Error", e);
         }
     }
 
-    private void updateFaculty() {
+    private void openUpdateDialog() {
         if (selectedFacultyId == -1) {
             JOptionPane.showMessageDialog(this, "Please select a faculty record to update.");
             return;
         }
-        Faculty faculty = getFacultyFromForm();
-        if (faculty == null) return;
         try {
-            if (facultyDAO.updateFaculty(faculty)) {
-                JOptionPane.showMessageDialog(this, "Faculty record updated successfully.");
+            Faculty current = facultyDAO.getById(selectedFacultyId);
+            if (current == null) {
+                JOptionPane.showMessageDialog(this, "The selected faculty record no longer exists.",
+                        "Not Found", JOptionPane.WARNING_MESSAGE);
+                reload();
+                return;
+            }
+            List<Department> depts = new java.util.ArrayList<>();
+            for (int i = 0; i < cmbDepartment.getItemCount(); i++) depts.add(cmbDepartment.getItemAt(i));
+
+            FacultyEditDialog dialog = new FacultyEditDialog(this, current, depts);
+            dialog.setVisible(true);
+
+            if (dialog.isUpdated()) {
                 clearForm();
-                loadFaculty();
+                reload();
             }
         } catch (SQLException e) {
             DbErrors.show(this, "Database Error", e);
@@ -295,7 +351,7 @@ public class FacultyFrame extends JFrame {
             if (facultyDAO.deleteFaculty(selectedFacultyId)) {
                 JOptionPane.showMessageDialog(this, "Faculty member deleted.");
                 clearForm();
-                loadFaculty();
+                reload();
             }
         } catch (SQLException e) {
             DbErrors.show(this, "Cannot delete faculty", e,

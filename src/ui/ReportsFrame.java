@@ -2,6 +2,8 @@ package ui;
 
 import dao.FacultyDAO;
 import dao.ReportDAO;
+import util.LoadCalculator;
+import util.WorkingHours;
 import model.Faculty;
 import util.DbErrors;
 
@@ -106,6 +108,13 @@ public class ReportsFrame extends JFrame {
         JButton btnRefreshSummary = createBtn("Generate Report", Theme.PRIMARY, 140);
         filterCard.add(btnRefreshSummary);
 
+        JLabel summaryNote = new JLabel("Hours Assigned = Lecture + Lab x " + LoadCalculator.LAB_WEIGHT
+                + "  |  FTE = regular load (" + (int) LoadCalculator.REGULAR_HOURS + " hrs)  |  OT max "
+                + (int) LoadCalculator.MAX_OVERTIME_HOURS + " hrs  |  Total Load = FTE + OT");
+        summaryNote.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        summaryNote.setForeground(Theme.MUTED);
+        filterCard.add(summaryNote);
+
         panel.add(filterCard, BorderLayout.NORTH);
 
         JPanel tableCard = new JPanel(new BorderLayout());
@@ -118,7 +127,7 @@ public class ReportsFrame extends JFrame {
         modelSummary = new DefaultTableModel(
                 new Object[]{
                     "Employee No", "Faculty Name", "Department", "Type",
-                    "Assigned Units", "Max Units", "Weekly Hours", "Status"
+                    "Lecture Hrs", "Lab Hrs", "Hours Assigned", "FTE", "OT Hours", "Total Load", "Status"
                 }, 0
         ) {
             @Override
@@ -144,29 +153,20 @@ public class ReportsFrame extends JFrame {
 
         try {
             for (Object[] r : reportDAO.getFacultyLoadSummary(term)) {
-                int assignedUnits = (Integer) r[4];
-                int maxUnits = (Integer) r[5];
-                double hours = (Double) r[6];
-
-                String loadStatus;
-                if (assignedUnits == 0) {
-                    loadStatus = "No Load";
-                } else if (assignedUnits == maxUnits) {
-                    loadStatus = "Full Load";
-                } else if (assignedUnits > maxUnits) {
-                    loadStatus = "OVERLOAD";
-                } else {
-                    loadStatus = "Normal";
-                }
-
                 modelSummary.addRow(new Object[]{
-                    r[0], r[1], r[2], r[3], assignedUnits, maxUnits,
-                    String.format("%.1f hrs", hours), loadStatus
+                    r[0], r[1], r[2], r[3],
+                    hrs((Double) r[4]), hrs((Double) r[5]), hrs((Double) r[6]),
+                    hrs((Double) r[7]), hrs((Double) r[8]), hrs((Double) r[9]),
+                    r[10]
                 });
             }
         } catch (SQLException e) {
             DbErrors.show(this, "Error generating summary", e);
         }
+    }
+
+    private static String hrs(double value) {
+        return String.format("%.2f hrs", value);
     }
 
     private JPanel createFacultySchedulePanel() {
@@ -265,7 +265,7 @@ public class ReportsFrame extends JFrame {
         filterCard.add(btnRoomReport);
 
         JLabel note = new JLabel("Utilization = booked hours / "
-                + (int) ReportDAO.WEEKLY_AVAILABLE_HOURS + " available hours per week (7:00 AM - 9:00 PM, Mon-Sat)");
+                + (int) ReportDAO.WEEKLY_AVAILABLE_HOURS + " available hours per week (" + WorkingHours.LABEL + ", Mon-Sat)");
         note.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         note.setForeground(Theme.MUTED);
         filterCard.add(note);

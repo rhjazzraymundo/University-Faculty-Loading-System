@@ -10,6 +10,8 @@ import model.Schedule;
 import model.Subject;
 import util.ConflictChecker;
 import util.DbErrors;
+import util.LoadCalculator;
+import util.WorkingHours;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -31,6 +33,7 @@ public class ScheduleFrame extends JFrame {
     private JComboBox<String> cmbDay;
     private JComboBox<String> cmbStartTime;
     private JComboBox<String> cmbEndTime;
+    private JComboBox<String> cmbSessionType;
 
     private JLabel lblFacultyLoad;
     private JTextField txtSearch;
@@ -47,6 +50,7 @@ public class ScheduleFrame extends JFrame {
     private List<Integer> subjectIds = new ArrayList<>();
     private List<Integer> facultyIds = new ArrayList<>();
     private List<Integer> roomIds = new ArrayList<>();
+    private List<String> roomTypes = new ArrayList<>();
 
     public ScheduleFrame() {
         scheduleDAO = new ScheduleDAO();
@@ -76,7 +80,7 @@ public class ScheduleFrame extends JFrame {
         title.setFont(new Font("Segoe UI", Font.BOLD, 18));
         title.setForeground(Color.WHITE);
 
-        JLabel sub = new JLabel("Timetable allocation with real-time conflict detection and max-unit monitoring");
+        JLabel sub = new JLabel("Timetable allocation with real-time conflict detection and load monitoring in hours (working hours 7:00 AM - 6:00 PM)");
         sub.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         sub.setForeground(Theme.HEADER_SUB);
 
@@ -101,8 +105,10 @@ public class ScheduleFrame extends JFrame {
         txtSection = new JTextField();
         cmbTerm = new JComboBox<>(new String[]{"2026-2027 1st Sem", "2026-2027 2nd Sem", "Summer"});
         cmbDay = new JComboBox<>(new String[]{"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"});
-        cmbStartTime = createTimeComboBox();
-        cmbEndTime = createTimeComboBox();
+        cmbStartTime = createTimeComboBox(false);
+        cmbEndTime = createTimeComboBox(true);
+        cmbSessionType = new JComboBox<>(new String[]{"Lecture", "Laboratory"});
+        cmbRoom.addActionListener(e -> syncSessionTypeWithRoom());   // lab rooms default to Laboratory
 
         formCard.add(new JLabel("Subject:")); formCard.add(cmbSubject);
         formCard.add(new JLabel("Faculty:")); formCard.add(cmbFaculty);
@@ -113,11 +119,13 @@ public class ScheduleFrame extends JFrame {
         formCard.add(new JLabel("Start Time:")); formCard.add(cmbStartTime);
         formCard.add(new JLabel("End Time:")); formCard.add(cmbEndTime);
 
-        formCard.add(new JLabel("Teaching Load:"));
+        String hintColor = String.format("#%06x", Theme.MUTED.getRGB() & 0xFFFFFF);
+        formCard.add(new JLabel("<html>Teaching Load: <font color='" + hintColor
+                + "' size='-1'><i>(hover over the load to view more details)</i></font></html>"));
         lblFacultyLoad = new JLabel("Select an instructor");
         lblFacultyLoad.setFont(new Font("Segoe UI", Font.BOLD, 12));
         formCard.add(lblFacultyLoad);
-        formCard.add(new JLabel("")); formCard.add(new JLabel(""));
+        formCard.add(new JLabel("Class Type:")); formCard.add(cmbSessionType);
 
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
         btnPanel.setOpaque(false);
@@ -158,7 +166,7 @@ public class ScheduleFrame extends JFrame {
         tableCard.add(searchBar, BorderLayout.NORTH);
 
         tableModel = new DefaultTableModel(
-                new Object[]{"ID", "Subject", "Units", "Faculty", "Room", "Section", "Term", "Day", "Start", "End"}, 0
+                new Object[]{"ID", "Subject", "Units", "Faculty", "Room", "Section", "Term", "Day", "Start", "End", "Type"}, 0
         ) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
@@ -204,16 +212,26 @@ public class ScheduleFrame extends JFrame {
         return btn;
     }
 
-    private JComboBox<String> createTimeComboBox() {
+    /** Start times run 7:00 AM to 5:30 PM; end times run 7:30 AM to 6:00 PM (working hours). */
+    private JComboBox<String> createTimeComboBox(boolean endTimes) {
         JComboBox<String> combo = new JComboBox<>();
-        for (int h = 7; h <= 20; h++) {
-            for (int m = 0; m < 60; m += 30) {
-                String period = h >= 12 ? "PM" : "AM";
-                int dh = h > 12 ? h - 12 : (h == 0 ? 12 : h);
-                combo.addItem(String.format("%02d:%02d %s", dh, m, period));
-            }
+        int first = WorkingHours.START_HOUR * 60 + (endTimes ? 30 : 0);
+        int last = WorkingHours.END_HOUR * 60 - (endTimes ? 0 : 30);
+        for (int minutes = first; minutes <= last; minutes += 30) {
+            int h = minutes / 60;
+            int m = minutes % 60;
+            String period = h >= 12 ? "PM" : "AM";
+            int dh = h > 12 ? h - 12 : (h == 0 ? 12 : h);
+            combo.addItem(String.format("%02d:%02d %s", dh, m, period));
         }
         return combo;
+    }
+
+    private void syncSessionTypeWithRoom() {
+        int idx = cmbRoom.getSelectedIndex();
+        if (idx >= 0 && idx < roomTypes.size()) {
+            cmbSessionType.setSelectedItem(roomTypes.get(idx));
+        }
     }
 
     private void updateFacultyLoadDisplay() {
@@ -227,14 +245,19 @@ public class ScheduleFrame extends JFrame {
         int fId = facultyIds.get(idx);
         String term = (String) cmbTerm.getSelectedItem();
         try {
-            int units = scheduleDAO.getTotalAssignedUnits(fId, term, selectedScheduleId);
-            double hrs = scheduleDAO.getTotalAssignedHours(fId, term, selectedScheduleId);
-            int max = scheduleDAO.getFacultyMaxUnits(fId);
+            double[] h = scheduleDAO.getLectureLabHours(fId, term, selectedScheduleId);
+            double credited = LoadCalculator.creditedHours(h[0], h[1]);
+            double regular = LoadCalculator.regularHours(scheduleDAO.getEmploymentType(fId));
+            double ot = LoadCalculator.overtime(credited, regular);
 
-            lblFacultyLoad.setText(String.format("Units: %d / %d  |  Hours: %.1f hrs/week", units, max, hrs));
-            if (units > max) {
+            lblFacultyLoad.setText(String.format("%.2f / %.0f hrs  |  OT %.2f / %.0f hrs",
+                    credited, regular, ot, LoadCalculator.MAX_OVERTIME_HOURS));
+            lblFacultyLoad.setToolTipText(String.format(
+                    "Lecture %.2f hrs + Lab %.2f hrs x %.2f = %.2f credited hrs (regular load %.0f hrs, max OT %.0f hrs)",
+                    h[0], h[1], LoadCalculator.LAB_WEIGHT, credited, regular, LoadCalculator.MAX_OVERTIME_HOURS));
+            if (LoadCalculator.exceedsMax(credited, regular)) {
                 lblFacultyLoad.setForeground(Theme.STATUS_OVER);
-            } else if (units >= max - 3) {
+            } else if (LoadCalculator.hasOvertime(credited, regular)) {
                 lblFacultyLoad.setForeground(Theme.STATUS_WARN);
             } else {
                 lblFacultyLoad.setForeground(Theme.STATUS_OK);
@@ -265,7 +288,7 @@ public class ScheduleFrame extends JFrame {
             for (Faculty f : facultyDAO.getActiveFaculty()) {
                 facultyIds.add(f.getFacultyId());
                 cmbFaculty.addItem(f.getEmployeeNo() + " - " + f.getFirstName() + " " + f.getLastName()
-                        + " (Max: " + f.getMaxUnits() + "u)");
+                        + " (" + f.getEmploymentType() + ")");
             }
         } catch (SQLException e) {
             DbErrors.show(this, "Error loading faculty", e);
@@ -275,9 +298,11 @@ public class ScheduleFrame extends JFrame {
     private void loadRooms() {
         cmbRoom.removeAllItems();
         roomIds.clear();
+        roomTypes.clear();
         try {
             for (Room r : roomDAO.getAllRooms()) {
                 roomIds.add(r.getRoomId());
+                roomTypes.add(r.getRoomType());
                 cmbRoom.addItem(r.getRoomName());
             }
         } catch (SQLException e) {
@@ -332,15 +357,36 @@ public class ScheduleFrame extends JFrame {
         }
     }
 
+   
     private boolean isOverloaded(Schedule s, int excludeId) throws SQLException {
-        int u = scheduleDAO.getSubjectUnits(s.getSubjectId());
-        int cur = scheduleDAO.getTotalAssignedUnits(s.getFacultyId(), s.getTerm(), excludeId);
-        int max = scheduleDAO.getFacultyMaxUnits(s.getFacultyId());
-        if (cur + u > max) {
+        double[] cur = scheduleDAO.getLectureLabHours(s.getFacultyId(), s.getTerm(), excludeId);
+        double current = LoadCalculator.creditedHours(cur[0], cur[1]);
+
+        double clockHours = (s.getEndTime().getTime() - s.getStartTime().getTime()) / (1000.0 * 60 * 60);
+        boolean lab = "Laboratory".equals(s.getSessionType());
+        double added = lab ? clockHours * LoadCalculator.LAB_WEIGHT : clockHours;
+        double total = current + added;
+
+        double regular = LoadCalculator.regularHours(scheduleDAO.getEmploymentType(s.getFacultyId()));
+        double max = LoadCalculator.maxHours(regular);
+
+        if (LoadCalculator.exceedsMax(total, regular)) {
             JOptionPane.showMessageDialog(this,
-                    String.format("Faculty Overload Error!\n\nSubject: %d unit(s)\nCurrent: %d unit(s)\nMax Limit: %d unit(s)", u, cur, max),
+                    String.format("Faculty Overload Error!\n\nThis class: %.2f hr(s) (%s)\nCurrent load: %.2f hr(s)\n"
+                            + "New total: %.2f hr(s)\nMaximum allowed: %.0f regular + %.0f overtime = %.0f hr(s)",
+                            added, lab ? "lab hours x " + LoadCalculator.LAB_WEIGHT : "lecture hours", current,
+                            total, regular, LoadCalculator.MAX_OVERTIME_HOURS, max),
                     "Max Load Exceeded", JOptionPane.WARNING_MESSAGE);
             return true;
+        }
+        if (LoadCalculator.hasOvertime(total, regular)) {
+            int choice = JOptionPane.showConfirmDialog(this,
+                    String.format("This class puts the faculty member into overtime.\n\nRegular load: %.0f hr(s)\n"
+                            + "New total: %.2f hr(s)\nOvertime: %.2f of %.0f hr(s)\n\nContinue?",
+                            regular, total, LoadCalculator.overtime(total, regular),
+                            LoadCalculator.MAX_OVERTIME_HOURS),
+                    "Overtime Load", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+            return choice != JOptionPane.YES_OPTION;
         }
         return false;
     }
@@ -380,6 +426,13 @@ public class ScheduleFrame extends JFrame {
             return null;
         }
 
+        if (!WorkingHours.isWithin(st, et)) {
+            JOptionPane.showMessageDialog(this,
+                    "Classes must be held within working hours (" + WorkingHours.LABEL + ").",
+                    "Outside Working Hours", JOptionPane.ERROR_MESSAGE);
+            return null;
+        }
+
         Schedule s = new Schedule();
         s.setSubjectId(subjectIds.get(cmbSubject.getSelectedIndex()));
         s.setFacultyId(facultyIds.get(cmbFaculty.getSelectedIndex()));
@@ -389,6 +442,7 @@ public class ScheduleFrame extends JFrame {
         s.setDayOfWeek((String) cmbDay.getSelectedItem());
         s.setStartTime(st);
         s.setEndTime(et);
+        s.setSessionType((String) cmbSessionType.getSelectedItem());
         return s;
     }
 
@@ -447,6 +501,9 @@ public class ScheduleFrame extends JFrame {
         Time et = (Time) tableModel.getValueAt(r, 9);
         cmbStartTime.setSelectedItem(formatTime(st));
         cmbEndTime.setSelectedItem(formatTime(et));
+        if (tableModel.getColumnCount() > 10 && tableModel.getValueAt(r, 10) != null) {
+            cmbSessionType.setSelectedItem(tableModel.getValueAt(r, 10).toString());   // after the room, which sets a default
+        }
         updateFacultyLoadDisplay();
     }
 
@@ -469,6 +526,7 @@ public class ScheduleFrame extends JFrame {
         cmbDay.setSelectedIndex(0);
         cmbStartTime.setSelectedIndex(0);
         cmbEndTime.setSelectedIndex(0);
+        syncSessionTypeWithRoom();
         table.clearSelection();
         updateFacultyLoadDisplay();
     }

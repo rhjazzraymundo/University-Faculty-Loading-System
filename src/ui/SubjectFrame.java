@@ -133,7 +133,7 @@ public class SubjectFrame extends JFrame {
         setContentPane(root);
 
         btnSave.addActionListener(e -> saveSubject());
-        btnUpdate.addActionListener(e -> updateSubject());
+        btnUpdate.addActionListener(e -> openUpdateDialog());
         btnDelete.addActionListener(e -> deleteSubject());
         btnClear.addActionListener(e -> clearForm());
         btnSearch.addActionListener(e -> searchSubjects());
@@ -211,19 +211,7 @@ public class SubjectFrame extends JFrame {
     private void selectSubject() {
         int r = tblSubjects.getSelectedRow();
         if (r == -1) return;
-
         selectedSubjectId = Integer.parseInt(tableModel.getValueAt(r, 0).toString());
-        txtSubjectCode.setText(tableModel.getValueAt(r, 1).toString());
-        txtSubjectTitle.setText(tableModel.getValueAt(r, 2).toString());
-        txtUnits.setText(tableModel.getValueAt(r, 3).toString());
-
-        String deptName = tableModel.getValueAt(r, 4).toString();
-        for (int i = 0; i < cmbDepartment.getItemCount(); i++) {
-            if (cmbDepartment.getItemAt(i).toString().equals(deptName)) {
-                cmbDepartment.setSelectedIndex(i);
-                break;
-            }
-        }
     }
 
     private void saveSubject() {
@@ -240,17 +228,26 @@ public class SubjectFrame extends JFrame {
         }
     }
 
-    private void updateSubject() {
+    private void openUpdateDialog() {
         if (selectedSubjectId == -1) {
             JOptionPane.showMessageDialog(this, "Please select a subject to update.");
             return;
         }
-        Subject s = getSubjectFromForm();
-        if (s == null) return;
-        s.setSubjectId(selectedSubjectId);
         try {
-            if (subjectDAO.updateSubject(s)) {
-                JOptionPane.showMessageDialog(this, "Subject updated successfully.");
+            Subject current = subjectDAO.getById(selectedSubjectId);
+            if (current == null) {
+                JOptionPane.showMessageDialog(this, "The selected subject no longer exists.",
+                        "Not Found", JOptionPane.WARNING_MESSAGE);
+                loadSubjects();
+                return;
+            }
+            List<Department> depts = new java.util.ArrayList<>();
+            for (int i = 0; i < cmbDepartment.getItemCount(); i++) depts.add(cmbDepartment.getItemAt(i));
+
+            SubjectEditDialog dialog = new SubjectEditDialog(this, current, depts);
+            dialog.setVisible(true);
+
+            if (dialog.isUpdated()) {
                 clearForm();
                 loadSubjects();
             }
